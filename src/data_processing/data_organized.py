@@ -3,7 +3,7 @@ import pandas as pd
 import tensorflow as tf
 from utils.path_funcs import *
 
-def collect_all_dfs_into_one():
+def collect_csv_files_into_one_df():
     data_csv_files_path = get_abs_path(get_relative_data_folder_path())
     all_csv_files = get_list_of_elements_in_dir(data_csv_files_path)
     dfs = []
@@ -92,7 +92,7 @@ def create_training_data(df, amount=1,split=0.2):
 
 def get_training_and_testing_data(amount=1):
     # print("in get_training_and_testing_data")
-    df = collect_all_dfs_into_one()
+    df = collect_csv_files_into_one_df()
     # print(df.loc[(df['x'] == 1.8184613737638664) & (df['y'] == 2.893173926071881) & (df['z'] == 1.96274536399414)])
     # dfs = split_dfs_based_on_patch(df)
     # split_dfs_for_training_testing_and_recombine()
