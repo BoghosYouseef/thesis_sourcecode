@@ -22,6 +22,9 @@ classifiers = [
 [build-system]
 requires = ["setuptools"]
 
+[project.scripts]
+hello = "thesis_sourcecode.src.clis.cli:sample_func"
+
 [project.urls]
 Homepage = "https://example.com"
 Repository = "https://github.com/BoghosYouseef/thesis_sourcecode.git"
