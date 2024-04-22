@@ -1,0 +1,10 @@
+
+[project]
+name = "by-mtsc-unilu"
+version = "0.0.1"
+authors = [
+    {name = "Josiah Carberry", email = "josiah_carberry@brown.edu"}
+]
+
+[build-system]
+requires = ["setuptools"]
