@@ -17,10 +17,10 @@ class History:
 
 
 class PatchClassificationModel:
-    def __init__(self, num_layers, num_neurons_per_layer):
+    def __init__(self, NNShape):
         total_layers = [layers.Input(shape=(3,))]
-        for i in range(num_layers):
-            total_layers.append(layers.Dense(num_neurons_per_layer, activation='relu'))
+        for num_of_neurons in NNShape:
+            total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
         
         total_layers.append(layers.Dense(96, activation='softmax'))
         
@@ -116,9 +116,9 @@ class PatchClassificationModel:
     
 class Experiment:
 
-    def __init__(self, list_nums_layers,list_num_neurons_per_layer, list_epochs, list_batch_sizes,list_optimizers):
-        self.list_nums_layers = list_nums_layers
-        self.list_num_neurons_per_layer = list_num_neurons_per_layer
+    def __init__(self, NNShape, list_epochs, list_batch_sizes,list_optimizers):
+        self.nums_layers = len(NNShape)
+        self.list_num_neurons_per_layer = NNShape
         self.list_epochs = list_epochs
         self.list_batch_sizes = list_batch_sizes
         self.list_optimizers = list_optimizers
@@ -126,13 +126,13 @@ class Experiment:
         self.combinations = self.create_combinations_of_settings()
 
     def create_combinations_of_settings(self):
-        return list(itertools.product(self.list_nums_layers,
+        return list(itertools.product(self.nums_layers,
                                       self.list_num_neurons_per_layer,
                                       self.list_epochs,
                                       self.list_batch_sizes,
                                       self.list_optimizers))
     
-    def run(self,data):
+    def run(self,data, save=False):
         X_train, X_test, Y_train, Y_test = data
         combinations_of_settings = self.create_combinations_of_settings()
 
@@ -144,7 +144,9 @@ class Experiment:
             patch_model.compile(opt=optimizer_, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'])
             patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=1)
             patch_model.plot(name=name_,add_to_title="loss function: sparse_categorical_crossentropy" ,show=False)
-            patch_model.save_(name=name_)
+            
+            if save:
+                patch_model.save_(name=name_)
 
 
     def create_file_name_from_settings(self, settings):
@@ -153,7 +155,7 @@ class Experiment:
 
     def __str__(self):
         return f"The Experiment will try all different combinations of the following:\n\
-        Number of Layers:{self.list_nums_layers}\n\
+        Number of Layers:{self.nums_layers}\n\
         Number of neurons per layer:{self.list_num_neurons_per_layer}\n\
         Number of epcohs:{self.list_epochs}\n\
         Number of batches:{self.list_batch_sizes}\n\
