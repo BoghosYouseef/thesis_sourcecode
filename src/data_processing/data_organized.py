@@ -49,7 +49,7 @@ def split_dfs_for_training_testing_and_recombine(dfs, amount=1, split=0.2):
             limit_amount = int(length*amount)
             df = df.iloc[:limit_amount]
         limit_split = int(length*split)
-        
+
         training_df = df.iloc[limit_split:,:]
         train.append(training_df)
 
@@ -100,42 +100,3 @@ def get_training_and_testing_data(amount=1):
     X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
     return X_train, X_test, Y_train, Y_test
 
-
-def create_training_sets_for_every_5_patches(df, amount=1,split=0.2):
-    dfs = split_df_based_on_patch(df)
-    training_sets = []
-    testing_sets = []
-    final_train_test_data_sets = []
-    print("length of dfs",len(dfs))
-    # for i in range(5, 96, 5):
-    for i in range(91, 97, 5):
-        print(i)
-        training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs[:i],amount=amount, split=split)
-        training_sets.append(training_df)
-        testing_sets.append(testing_df)
-    # training_df = training_df.sample(frac=1)
-    for i in range(len(training_sets)):
-        training_df = training_sets[i]
-        testing_df = testing_sets[i]
-
-        x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
-        X_train = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
-        Y_train = [patch_trn[i] for i in range(training_df.shape[0])]
-        x_tst, y_tst, z_tst, patch_tst, sp1_tst, sp2_tst, sd_tst = get_xys_sp1_sp2_sd_from_df(testing_df)
-        X_test = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
-        Y_test = [patch_tst[i] for i in range(testing_df.shape[0])]
-
-        X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
-
-        final_train_test_data_sets.append([X_train, X_test, Y_train, Y_test])
-    
-    return final_train_test_data_sets
-
-def get_5patch_training_and_testing_data(amount=1):
-    df = collect_all_dfs_into_one()
-    all_training_sets_for_5_patches = create_training_sets_for_every_5_patches(df)
-    return all_training_sets_for_5_patches
-# def train_test_split(X, Y, split=0.2):
-    
-#     one_point = (X)
-#     pass
