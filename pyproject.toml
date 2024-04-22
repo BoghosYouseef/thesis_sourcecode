@@ -23,7 +23,8 @@ classifiers = [
 requires = ["setuptools"]
 
 [project.scripts]
-hello = "thesis_sourcecode.src.clis.cli:sample_func"
+by-mtsc-unilu = "entry_point:main"
+
 
 [project.urls]
 Homepage = "https://example.com"

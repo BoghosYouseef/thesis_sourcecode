@@ -1,3 +1,4 @@
 .venv/
 __pycache__
 src/by_mtsc_unilu.egg-info/
+build/

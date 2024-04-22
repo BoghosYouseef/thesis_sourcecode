@@ -1,5 +1,4 @@
 import typer
-
 from PyInquirer import prompt, print_json, Separator
 from rich import print as rprint
 
@@ -7,7 +6,7 @@ app = typer.Typer()
 
 
 @app.command("hi")
-def sample_func():
+def sample1_func():
     rprint("[red bold]Hi[/red bold] [yellow]World[yello]")
 
 @app.command("hello")
