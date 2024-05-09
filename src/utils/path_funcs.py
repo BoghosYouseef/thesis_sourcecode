@@ -15,3 +15,9 @@ def get_abs_path(file_name):
 
 def get_relative_saved_plots_folder_path():
     return Path('data/plots')
+
+def get_relative_model_training_data_folder_path():
+    return Path('data/csv_files/model_training_history')
+
+def get_patch_model_training_data_folder_path():
+    return get_abs_path(os.path.join(get_relative_model_training_data_folder_path(), "patch_model"))

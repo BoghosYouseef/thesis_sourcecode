@@ -3,7 +3,7 @@
 name = "by-mtsc-unilu"
 dynamic = ["version"]
 authors = [
-    {name = "Josiah Carberry", email = "josiah_carberry@brown.edu"}
+    {name = "Boghos Youseef", email = "boghos.youseef.001@student.uni.lu"}
 ]
 
 description = "The source code for my master thesis titled 'Machine learning for surface classification and surface parameter estimation to accelerate finite element simulations with unilateral contact'"

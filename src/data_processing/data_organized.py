@@ -4,7 +4,7 @@ import tensorflow as tf
 from utils.path_funcs import *
 
 def collect_csv_files_into_one_df():
-    data_csv_files_path = get_abs_path(get_relative_data_folder_path())
+    data_csv_files_path = os.path.join(get_abs_path(get_relative_data_folder_path()),"raw/")
     all_csv_files = get_list_of_elements_in_dir(data_csv_files_path)
     dfs = []
     col_names = ["x", "y", "z", "patch", "sp1", "sp2", "sd"]
@@ -27,8 +27,11 @@ def collect_csv_files_into_one_df():
     final_df = pd.concat(dfs, ignore_index=True)
     final_df = final_df.sort_values(by="patch")
     # correction of some data points
-    final_df = final_df[(final_df[:,4]>=0)&(final_df[:,4]<=1)&(final_df[:,5]>=0)&(final_df[:,5]<=1)]
-    # print(final_df.head())
+    # print("final_df.shape before filter: ", final_df.shape)
+    # final_df = final_df[(final_df['sp1']>=0)&(final_df['sp1']<=1)&(final_df['sp2']>=0)&(final_df['sp2']<=1)]
+    # print("final_df.shape AFTER filter: ", final_df.shape)
+    print("final_df.shape", final_df.shape)
+    print(final_df.head())
     # print(final_df.tail())
     return final_df
 
@@ -39,15 +42,17 @@ def split_df_based_on_patch(df):
     
     return dfs
 
-def split_dfs_for_training_testing_and_recombine(dfs, amount=1, split=0.2):
+def split_dfs_for_training_testing_and_recombine(dfs, amount=1, split=0.2, random_state=1):
     train = []
     test = []
     for df in dfs:
 
         length = df.shape[0]
         if amount > 0 and amount != 1:
-            limit_amount = int(length*amount)
-            df = df.iloc[:limit_amount]
+            df = df.sample(frac=amount,random_state=random_state)
+            # limit_amount = int(length*amount)
+            # df = df.iloc[:limit_amount]
+            length = df.shape[0]
         limit_split = int(length*split)
 
         training_df = df.iloc[limit_split:,:]
@@ -57,8 +62,9 @@ def split_dfs_for_training_testing_and_recombine(dfs, amount=1, split=0.2):
         test.append(testing_df)
 
     train_final = pd.concat(train, ignore_index=True)
+    print(f"training samples: {train_final.shape}")
     test_final = pd.concat(test, ignore_index=True)
-
+    print(f"testing samples: {test_final.shape}")
     return train_final, test_final
 
 def get_xys_sp1_sp2_sd_from_df(df):
@@ -69,18 +75,17 @@ def get_xys_sp1_sp2_sd_from_df(df):
     sp1 = df["sp1"].tolist() 
     sp2 = df["sp2"].tolist() 
     sd = df["sd"].tolist()
-
     return x, y, z, patch, sp1, sp2, sd
 
 # print(get_xys_sp1_sp2_sd_from_df(READY_CSV))
 
-def create_training_data(df, amount=1,split=0.2):
+def create_patch_model_training_data(df, amount=1,split=0.2,random_state=1):
     
     dfs = split_df_based_on_patch(df)
-    training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split)
+    training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split, random_state=random_state)
 
 
-    training_df = training_df.sample(frac=1)
+    training_df = training_df.sample(frac=0.1,random_state=1)
     x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
     X_train = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
     Y_train = [patch_trn[i] for i in range(training_df.shape[0])]
@@ -88,15 +93,58 @@ def create_training_data(df, amount=1,split=0.2):
     X_test = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
     Y_test = [patch_tst[i] for i in range(testing_df.shape[0])]
     
+    
     return X_train, X_test, Y_train, Y_test
 
-def get_training_and_testing_data(amount=1):
-    # print("in get_training_and_testing_data")
+def create_surface_points_model_training_data(df, amount=1,split=0.2):
+    
+    dfs = split_df_based_on_patch(df)
+    training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split)
+
+
+    # training_df = training_df.sample(frac=1)
+    x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
+    X_train_points = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
+    X_train_patches = [patch_trn[i] for i in range(training_df.shape[0])]
+    Y_train_p1 = [sp1_trn[i] for i in range(training_df.shape[0])]
+    Y_train_p2 = [sp2_trn[i] for i in range(training_df.shape[0])]
+    x_tst, y_tst, z_tst, patch_tst, sp1_tst, sp2_tst, sd_tst = get_xys_sp1_sp2_sd_from_df(testing_df)
+    X_test_points = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
+    X_test_patches = [patch_tst[i] for i in range(testing_df.shape[0])]
+    Y_test_p1 = [sp1_tst[i] for i in range(testing_df.shape[0])]
+    Y_test_p2 = [sp2_tst[i] for i in range(testing_df.shape[0])]
+    
+    
+    return X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2
+
+def get_training_and_testing_data_for_patch_model(amount=1, split=0.2,random_state=1):
     df = collect_csv_files_into_one_df()
-    # print(df.loc[(df['x'] == 1.8184613737638664) & (df['y'] == 2.893173926071881) & (df['z'] == 1.96274536399414)])
-    # dfs = split_dfs_based_on_patch(df)
-    # split_dfs_for_training_testing_and_recombine()
-    X_train, X_test, Y_train, Y_test = create_training_data(df, amount=amount)
+    X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=amount, split=split,random_state=random_state)
     X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
     return X_train, X_test, Y_train, Y_test
 
+
+def get_training_and_testing_data_for_sp_model(amount=1, split=0.2):
+        df = collect_csv_files_into_one_df()
+
+        X_train_points, X_train_patches,
+        X_test_points,X_test_patches,
+        Y_train_p1, Y_train_p2,
+        Y_test_p1,Y_test_p2 = create_surface_points_model_training_data(df, amount=amount, split=split)
+
+        X_train_points = tf.convert_to_tensor(X_train_points)
+        X_train_patches = tf.convert_to_tensor(X_train_patches)
+        X_test_points = tf.convert_to_tensor(X_test_points)
+        X_test_patches = tf.convert_to_tensor(X_test_patches)
+        Y_train_p1 = tf.convert_to_tensor(Y_train_p1)
+        Y_train_p2 = tf.convert_to_tensor(Y_train_p2)
+        Y_test_p1 = tf.convert_to_tensor(Y_test_p1)
+        Y_test_p2 = tf.convert_to_tensor(Y_test_p2)
+       
+        return X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2
+
+
+# def sample_random_points_from_data_set_per_patch():
+#     df = collect_csv_files_into_one_df()
+#     dfs = split_df_based_on_patch(df)
+#     training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split)
