@@ -1,4 +1,6 @@
 import os
+import random
+import numpy as np
 import pandas as pd
 from utils.path_funcs import get_patch_model_training_data_folder_path
 
@@ -32,3 +34,23 @@ def print_training_results():
         # print(df.describe())
         print("-"*10)
         print( )
+
+def get_indices_of_largest_N_numbers_in_a_list(list_:list[float])->dict[int:float]:
+    result = {}
+    for i in range(len(list_)):
+        result[i] = list_[i]
+    result = sorted(result.items(),key=lambda x:x[1], reverse=True)
+    return result
+
+
+def get_top_N_largest_nums_indices_in_list(list_, N=5):
+    result = {}
+    count = 0
+    for key, value in get_indices_of_largest_N_numbers_in_a_list(list_):
+        result[key] = value
+        count += 1
+        if count == N:
+            return result
+            
+    return result
+

@@ -2,20 +2,26 @@ import os
 import pandas as pd
 import tensorflow as tf
 from utils.path_funcs import *
+from matplotlib import pyplot as plt
 
 def collect_csv_files_into_one_df():
     data_csv_files_path = os.path.join(get_abs_path(get_relative_data_folder_path()),"raw/")
     all_csv_files = get_list_of_elements_in_dir(data_csv_files_path)
+    print("number of files: ", len(all_csv_files))
     dfs = []
     col_names = ["x", "y", "z", "patch", "sp1", "sp2", "sd"]
     # READY_CSV = pd.read_csv(os.path.join(data_csv_files_path, all_csv_files[0]),  names=col_names)
     # print(READY_CSV['patch'].unique())
     uniques = []
+    total_size = 0
     for i in all_csv_files:
         # path to file Points_0_0_0.csv
         path = os.path.join(data_csv_files_path, i)#all_csv_files[-1])
         READY_CSV = pd.read_csv(path, names=col_names)
+        total_size+= len(READY_CSV.index)
+        print("number of rows: ", len(READY_CSV.index), "total: ", total_size)
         dfs.append(READY_CSV)
+        
         # for i in READY_CSV['patch'].unique():
         #     uniques.append(i)
         # print(READY_CSV['patch'].unique())
@@ -42,14 +48,16 @@ def split_df_based_on_patch(df):
     
     return dfs
 
-def split_dfs_for_training_testing_and_recombine(dfs, amount=1, split=0.2, random_state=1):
+def split_dfs_for_training_testing_and_recombine(dfs, amount=960000, split=0.2, random_state=1):
     train = []
     test = []
+    num = amount//len(dfs)
     for df in dfs:
 
         length = df.shape[0]
-        if amount > 0 and amount != 1:
-            df = df.sample(frac=amount,random_state=random_state)
+       
+        if amount > 0:
+            df = df.sample(n=num,random_state=random_state)
             # limit_amount = int(length*amount)
             # df = df.iloc[:limit_amount]
             length = df.shape[0]
@@ -62,6 +70,7 @@ def split_dfs_for_training_testing_and_recombine(dfs, amount=1, split=0.2, rando
         test.append(testing_df)
 
     train_final = pd.concat(train, ignore_index=True)
+    
     print(f"training samples: {train_final.shape}")
     test_final = pd.concat(test, ignore_index=True)
     print(f"testing samples: {test_final.shape}")
@@ -79,13 +88,12 @@ def get_xys_sp1_sp2_sd_from_df(df):
 
 # print(get_xys_sp1_sp2_sd_from_df(READY_CSV))
 
-def create_patch_model_training_data(df, amount=1,split=0.2,random_state=1):
+def create_patch_model_training_data(df, amount=960000,split=0.2,random_state=1):
     
     dfs = split_df_based_on_patch(df)
     training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split, random_state=random_state)
 
 
-    training_df = training_df.sample(frac=0.1,random_state=1)
     x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
     X_train = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
     Y_train = [patch_trn[i] for i in range(training_df.shape[0])]
@@ -96,7 +104,7 @@ def create_patch_model_training_data(df, amount=1,split=0.2,random_state=1):
     
     return X_train, X_test, Y_train, Y_test
 
-def create_surface_points_model_training_data(df, amount=1,split=0.2):
+def create_surface_points_model_training_data(df, amount=960000,split=0.2):
     
     dfs = split_df_based_on_patch(df)
     training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split)
@@ -117,14 +125,14 @@ def create_surface_points_model_training_data(df, amount=1,split=0.2):
     
     return X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2
 
-def get_training_and_testing_data_for_patch_model(amount=1, split=0.2,random_state=1):
+def get_training_and_testing_data_for_patch_model(amount=960000, split=0.2,random_state=1):
     df = collect_csv_files_into_one_df()
     X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=amount, split=split,random_state=random_state)
     X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
     return X_train, X_test, Y_train, Y_test
 
 
-def get_training_and_testing_data_for_sp_model(amount=1, split=0.2):
+def get_training_and_testing_data_for_sp_model(amount=960000, split=0.2):
         df = collect_csv_files_into_one_df()
 
         X_train_points, X_train_patches,
@@ -144,7 +152,58 @@ def get_training_and_testing_data_for_sp_model(amount=1, split=0.2):
         return X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2
 
 
+
+def plot_data(training_data: list[tuple], testing_data: list[tuple]):
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(projection='3d')
+    
+    x, y, z = zip(*training_data)
+    xt, yt, zt = zip(*testing_data)
+
+    ax.scatter(x, y, z, c='tab:blue', label="Training Points")
+    ax.scatter(xt, yt, zt, c='tab:orange', label="Testing Points")
+    ax.legend()
+    plt.show()
 # def sample_random_points_from_data_set_per_patch():
 #     df = collect_csv_files_into_one_df()
 #     dfs = split_df_based_on_patch(df)
 #     training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split)
+
+def plot_bar_points_per_patch(data):
+    patches = [i for i in range(96)]
+    counts = [len(data[data["patch"]==i]) for i in patches]
+    # for i in patches:
+    #     print(f"patch: {i}, count: {counts[i]}")
+    fig, ax = plt.subplots()
+    ax.set_ylabel('Number of Points')
+    ax.set_xlabel('Patch')
+    ax.set_xticks([i for i in range(0, 100, 5)])
+    ax.set_xlim(left=- 1.0, right=96.0)
+    ax.set_title('Number of Points per patch')
+    ax.bar(patches, counts)
+    plt.show()
+
+
+
+def get_N_random_points_per_patch_for_patch_model_training(N, random_state=1, split=0.2):
+    df = collect_csv_files_into_one_df()
+    dfs = split_df_based_on_patch(df)
+    sampled_dfs = []
+    for each_df in dfs:
+        each_df = each_df.sample(n = N, random_state=random_state)
+        sampled_dfs.append(each_df)
+
+    training_df, testing_df = split_dfs_for_training_testing_and_recombine(sampled_dfs,amount=960000, split=split)
+    plot_bar_points_per_patch(training_df)
+    plot_bar_points_per_patch(testing_df)
+    x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
+    X_train = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
+    Y_train = [patch_trn[i] for i in range(training_df.shape[0])]
+    x_tst, y_tst, z_tst, patch_tst, sp1_tst, sp2_tst, sd_tst = get_xys_sp1_sp2_sd_from_df(testing_df)
+    X_test = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
+    Y_test = [patch_tst[i] for i in range(testing_df.shape[0])]
+    
+    X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
+
+    return X_train, X_test, Y_train, Y_test
+

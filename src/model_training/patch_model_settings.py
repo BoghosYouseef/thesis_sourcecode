@@ -9,21 +9,18 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.offsetbox import AnchoredText
 from utils.path_funcs import get_relative_saved_models_folder_path, get_abs_path, get_relative_saved_plots_folder_path, get_relative_data_folder_path
-
-class History:
-
-    def __init__(self, history, settings):
-        self.history = history
-        self.settings = settings
-
-
+from utils.utils import get_top_N_largest_nums_indices_in_list
+from data_processing.data_organized import collect_csv_files_into_one_df, get_training_and_testing_data_for_patch_model
 class PatchClassificationModel:
-    def __init__(self, NNShape, diamond=False):
+    def __init__(self, NNShape, diamond=False, regularizer=False):
         total_layers = [layers.Input(shape=(3,))]
         for num_of_neurons in NNShape:
             total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
         
-        total_layers.append(layers.Dense(96, activation='softmax'))
+        if regularizer:
+            total_layers.append(layers.Dense(96, activation='softmax', kernel_regularizer='l2'))
+        else:
+            total_layers.append(layers.Dense(96, activation='softmax'))
         
         self.model = keras.Sequential(total_layers)
         self.history = []
@@ -136,21 +133,26 @@ class PatchClassificationModel:
     def __create_file_name(self):
         return f"shape-{self.settings['shape']}bs-{self.settings['batch_size']}"
 
+    @staticmethod
+    def load_model(path):
+        return keras.models.load_model(path)
 
     
 class Experiment:
 
-    def __init__(self, nl,NN, list_epochs, list_batch_sizes,list_optimizers, diamond=False):
+    def __init__(self, nl,NN, list_epochs, list_batch_sizes,list_optimizers, diamond=False, regularizer=False):
         self.nums_layers = nl
         self.list_num_neurons_per_layer = NN
         self.list_epochs = list_epochs
         self.list_batch_sizes = list_batch_sizes
         self.list_optimizers = list_optimizers
-
+        self.regularizer = regularizer
         self.combinations = self.create_combinations_of_settings()
 
         if diamond:
             pass
+        if regularizer:
+            print("weights (kernel) regularizer L2 will be used for output layer")
 
     def create_combinations_of_settings(self):
         return list(itertools.product(self.nums_layers,
@@ -170,7 +172,8 @@ class Experiment:
             number_of_layers, number_of_neurons, epochs_, batch_size_, optimizer_ = setting_
             NNShape = [number_of_neurons] * number_of_layers
             print("NNSHAPE = ", NNShape)
-            patch_model = PatchClassificationModel(NNShape=NNShape)
+            patch_model = PatchClassificationModel(NNShape=NNShape, regularizer=self.regularizer)
+            
             patch_model.compile(opt=optimizer_, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'])
             patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=1)
 
@@ -188,17 +191,54 @@ class Experiment:
         Number of batches:{self.list_batch_sizes}\n\
         List of optimizers:{self.list_optimizers}\n"
         
+# class PatchModelWeightsTrained
+
+class Utils:
+
+    @classmethod
+    def check_which_subsequent_guesses_are_correct(cls, path):
 
 
 
-# model = keras.Sequential([
-#     layers.Input(shape=(3,)),
-#     layers.Dense(50, activation='relu'),
-#     layers.Dense(50, activation='relu'),
-#     layers.Dense(95, activation='softmax')
-# ])
+        X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=1, split=0.2, random_state=1)
+        patch_model = tf.keras.models.load_model(path)
 
-# model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        results = { 
+                    str(i):0 for i in range(97)
+                    }
+        # start_ = start
+        # end_ = end
+        wrong_predictions = 0
+        number_of_samples = len(X_test)
+        print("number of samples: ", number_of_samples)
+
+        predictions = patch_model.predict(X_test)
+        print("len of predictions: ", len(predictions))
+        predictions_and_index_list = [get_top_N_largest_nums_indices_in_list(i,N=96) for i in predictions]
+        
+        expectations = Y_test
+        for i in range(len(predictions_and_index_list)):
+            expected_patch = Y_test[i]
+            position = 0
+            for prediction in predictions_and_index_list[i].keys():
+                if int(prediction) == int(expected_patch):
+                    if position != 0:
+                        wrong_predictions += 1
+                    results[str(position)] += 1
+                    continue
+                position += 1
+        # print("percentage of mistakes: %2.2f %% ()" %(wrong_predictions*100/number_of_samples))
+        print(f"percentage of mistakes: {(wrong_predictions/number_of_samples):2.2%} ({wrong_predictions})")
+        for key, value in results.items():
+            print(f"percentage of guess number {key} being correct: {(value/wrong_predictions):2.2%} {(value)}")
 
 
 
+    def train_a_model_with_output_layer_weights_affected_by_number_of_samples_per_patch(shape):
+        patch_model = PatchClassificationModel(NNShape=shape)
+        last_layer = patch_model.model.layers[-1]
+        print("model.layers: ", patch_model.model.layers)
+
+
+    # def l1_reg(weight_matrix):
+    #     return 0.01 * ops.sum(ops.absolute(weight_matrix))
