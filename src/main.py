@@ -22,24 +22,24 @@ from model_training.patch_model_settings import Utils
 
 # 10k points per patch = 960000 | full dataset = 8 960 000
 # when amount == 0 takes full dataset
-# X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=960000, split=0.2, random_state=1) # gets training data for the whole dataset
+X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=0, split=0.2, random_state=1) # gets training data for the whole dataset
 # X_train, X_test, Y_train, Y_test = get_N_random_points_per_patch_for_patch_model_training(10000, random_state=1, split=0.2)
 # print(get_abs_path_of_package_root())
 # collect_csv_files_into_one_df()
 # df = collect_csv_files_into_one_df()
 # X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=0.1, split=0.2, random_state=1)
 # X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2 = get_training_and_testing_data(amount=0.5, split=0.2, model=1) # gets training data for the whole dataset
-# print(X_train.shape)
-# print(Y_train.shape)
-# print(X_test.shape)
-# print(Y_test.shape)
+print(X_train.shape)
+print(Y_train.shape)
+print(X_test.shape)
+print(Y_test.shape)
 
-# layers1 = [2]
-# neurons1 = [512, 1024, 2048, 4096]
-# opt = tf.keras.optimizers.Adam()
-# exp = Experiment(nl=layers1,NN=neurons1, list_epochs=[100], list_batch_sizes=[64],list_optimizers=[opt], regularizer=True)
-# print(exp.create_combinations_of_settings())
-# exp.run((X_train, X_test, Y_train, Y_test),save=True, name="patch_model_rand_sample_0.1_weights_regularizer")
+layers1 = [2]
+neurons1 = [512, 1024, 2048, 4096]
+opt = tf.keras.optimizers.Adam()
+exp = Experiment(nl=layers1,NN=neurons1, list_epochs=[100], list_batch_sizes=[64],list_optimizers=[opt], regularizer=True)
+print(exp.create_combinations_of_settings())
+exp.run((X_train, X_test, Y_train, Y_test),save=True, name="patch_model_rand_sample_0.1_weights_regularizer")
 
 # ###############
 # NN_SHAPES = []
