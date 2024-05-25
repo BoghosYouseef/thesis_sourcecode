@@ -3,3 +3,6 @@ __pycache__
 src/by_mtsc_unilu.egg-info/
 build/
 archive/
+*.zip
+*.7z
+*.gif

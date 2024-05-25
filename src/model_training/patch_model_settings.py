@@ -4,36 +4,56 @@ import itertools
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from utils.path_funcs import *
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.offsetbox import AnchoredText
-from utils.path_funcs import get_relative_saved_models_folder_path, get_abs_path, get_relative_saved_plots_folder_path, get_relative_data_folder_path
+from matplotlib.ticker import FormatStrFormatter
 from utils.utils import get_top_N_largest_nums_indices_in_list
+from utils.path_funcs import *
 from data_processing.data_organized import collect_csv_files_into_one_df, get_training_and_testing_data_for_patch_model
-class PatchClassificationModel:
-    def __init__(self, NNShape, diamond=False, regularizer=False):
-        total_layers = [layers.Input(shape=(3,))]
-        for num_of_neurons in NNShape:
-            total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
-        
-        if regularizer:
-            total_layers.append(layers.Dense(96, activation='softmax', kernel_regularizer='l2'))
-        else:
-            total_layers.append(layers.Dense(96, activation='softmax'))
-        
-        self.model = keras.Sequential(total_layers)
-        self.history = []
-        if diamond:
-            shape_str = ""
-            for i in NNShape:
-                shape_str = shape_str + str(i) + "-"
-            
-            self.settings = {"shape":f"{shape_str}"}
 
-        else:
-            self.settings = {"shape":f"{num_of_neurons}-"*len(NNShape)}
+
+class PatchClassificationModel:
+    def __init__(self, NNShape=[], diamond=False, regularizer=False, name=""):
         
+        if name:
+            try:
+                self.name = name
+                model_path = get_abs_saved_patch_models_folder_path_with_model_name(name)
+                training_history_csv_path = get_patch_model_training_data_file_abs_path_by_model_name(name)
+                self.model = keras.models.load_model(model_path)
+                colnames = ['epoch', 'loss', 'accuracy', 'val_loss', 'val_accuracy']
+                self.history = pd.read_csv(training_history_csv_path,names=colnames, header=0)
+                
+            except FileNotFoundError as error:
+                print(f"{error}")
+        
+        else:
+            
+            if NNShape:
+                total_layers = [layers.Input(shape=(3,))]
+                for num_of_neurons in NNShape:
+                    total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
+                
+                if regularizer:
+                    total_layers.append(layers.Dense(96, activation='softmax', kernel_regularizer='l2'))
+                else:
+                    total_layers.append(layers.Dense(96, activation='softmax'))
+                
+                self.model = keras.Sequential(total_layers)
+                self.history = []
+                if diamond:
+                    shape_str = ""
+                    for i in NNShape:
+                        shape_str = shape_str + str(i) + "-"
+                    
+                    self.settings = {"shape":f"{shape_str}"}
+
+                else:
+                    self.settings = {"shape":f"{num_of_neurons}-"*len(NNShape)}
+
 
     def compile(self,opt, loss_, metrics_):
         self.settings['optimizer'] = opt._name
@@ -74,14 +94,11 @@ class PatchClassificationModel:
         fig, ax = plt.subplots(1, 1)
         fig.set_figheight(8)
         fig.set_figwidth(15)
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_yticks(np.arange(1e-3, 2e+0, step=0.05))
+        ax.set_yticklabels([str(i) for i in np.arange(1e-3, 2e+0, step=10)])
         ax.set_yscale("log")
-        # ax.set_ylim(bottom=1e-4,top=1e+0)
-        if len(data1) >= 100:
-
-            ax.set_xticks(np.arange(0, len(data1), 50))
-        else:
-            ax.set_xticks([int(len(data1)*0.5),int(len(data1)*0.75)])
+        # ax.set_ylim(bottom=1e-3,top=2e+0)
 
         text1 = str(lowest_point1[1])
         text2 = str(lowest_point2[1])
@@ -105,7 +122,8 @@ class PatchClassificationModel:
         ax.set_xlabel("epochs")
         ax.set_xticks(np.arange(0,self.settings['epochs']+1, 5))
         ax.set_ylabel(func)
-
+        ax.yaxis.set_minor_formatter(FormatStrFormatter("%.3f"))
+        plt.tick_params(axis='y', which='minor')
         
         if save:
                 name = name + "-" + self.__create_file_name()
@@ -114,6 +132,9 @@ class PatchClassificationModel:
 
         if show:
             plt.show()
+
+
+
     def save_(self, name="patch_model"):
         name = name + "-" + self.__create_file_name()
         path = os.path.join(get_abs_path(get_relative_saved_models_folder_path()),f"{name}.keras")
@@ -133,9 +154,7 @@ class PatchClassificationModel:
     def __create_file_name(self):
         return f"shape-{self.settings['shape']}bs-{self.settings['batch_size']}"
 
-    @staticmethod
-    def load_model(path):
-        return keras.models.load_model(path)
+
 
     
 class Experiment:

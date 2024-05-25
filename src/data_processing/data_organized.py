@@ -3,9 +3,11 @@ import pandas as pd
 import tensorflow as tf
 from utils.path_funcs import *
 from matplotlib import pyplot as plt
+# from importlib_resources import contents
 
 def collect_csv_files_into_one_df():
-    data_csv_files_path = os.path.join(get_abs_path(get_relative_data_folder_path()),"raw/")
+    # data_csv_files_path = os.path.join(get_abs_path(get_relative_raw_data_folder_path()),"raw/")
+    data_csv_files_path = get_abs_raw_data_folder_path()
     all_csv_files = get_list_of_elements_in_dir(data_csv_files_path)
     print("number of files: ", len(all_csv_files))
     dfs = []

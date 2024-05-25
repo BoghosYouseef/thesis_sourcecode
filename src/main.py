@@ -7,6 +7,7 @@ import keras.losses
 import keras.optimizers
 import numpy as np
 import tensorflow as tf
+from utils.utils import *
 import moviepy.editor as mp
 import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
@@ -15,21 +16,24 @@ from model_training.patch_model_settings import Experiment
 from model_training.patch_model_settings import PatchClassificationModel
 from model_training.surface_points_model_settings import SurfacePointsModel
 from data_processing.data_organized import get_training_and_testing_data_for_patch_model, collect_csv_files_into_one_df, split_df_based_on_patch,create_patch_model_training_data, plot_data, plot_bar_points_per_patch, get_N_random_points_per_patch_for_patch_model_training
-from utils.path_funcs import get_relative_saved_models_folder_path, get_abs_path
-from utils.utils import create_diamond_shape_using_powers_of_two, print_training_results, get_indices_of_largest_N_numbers_in_a_list, get_top_N_largest_nums_indices_in_list
+from utils.path_funcs import get_abs_saved_models_folder_path, get_abs_path, get_abs_raw_data_folder_path, get_abs_path_of_package_root
 from model_training.patch_model_settings import Utils
 
-# 10k points per patch = 960000 | full dataset = 8 960 000
-X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=960000, split=0.2, random_state=1) # gets training data for the whole dataset
-# X_train, X_test, Y_train, Y_test = get_N_random_points_per_patch_for_patch_model_training(10000, random_state=1, split=0.2)
 
+# 10k points per patch = 960000 | full dataset = 8 960 000
+# when amount == 0 takes full dataset
+# X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=960000, split=0.2, random_state=1) # gets training data for the whole dataset
+# X_train, X_test, Y_train, Y_test = get_N_random_points_per_patch_for_patch_model_training(10000, random_state=1, split=0.2)
+# print(get_abs_path_of_package_root())
+# collect_csv_files_into_one_df()
 # df = collect_csv_files_into_one_df()
 # X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=0.1, split=0.2, random_state=1)
 # X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2 = get_training_and_testing_data(amount=0.5, split=0.2, model=1) # gets training data for the whole dataset
-print(X_train.shape)
-print(Y_train.shape)
-print(X_test.shape)
-print(Y_test.shape)
+# print(X_train.shape)
+# print(Y_train.shape)
+# print(X_test.shape)
+# print(Y_test.shape)
+
 # layers1 = [2]
 # neurons1 = [512, 1024, 2048, 4096]
 # opt = tf.keras.optimizers.Adam()
@@ -51,10 +55,10 @@ print(Y_test.shape)
 # nn_shape = create_diamond_shape_using_powers_of_two(starting_num_neurons=8, n=7)
 # name="patch_model_rand_sample_0.1-"
 # # # print("current nnshape training: ", nn_shape)
-# patch_model = PatchClassificationModel(NNShape=[8192])
+# patch_model = PatchClassificationModel(NNShape=[512, 512], regularizer=True)
 # patch_model.compile(opt=opt,loss_="sparse_categorical_crossentropy",metrics_=['accuracy'])
-# patch_model.train((X_train, X_test, Y_train, Y_test),epochs_=100, batch_size_=64)
-# patch_model.plot(show=False, save=True,name=name)
+# patch_model.train((X_train, X_test, Y_train, Y_test),epochs_=50, batch_size_=1024)
+# patch_model.plot(show=True, save=False)
 # patch_model.save_(name=name)
 # patch_model.save_training_and_validation_data(name=name)
 # data = collect_csv_files_into_one_df()
@@ -86,3 +90,12 @@ print(Y_test.shape)
 # wrongly_predicted_testing_points = [X_train[i] for i in range(len(X_test)) if np.argmax(tst_predictions[i]) != Y_test[i]]
 # plot_data(training_data=wrongly_predicted_training_points, testing_data=wrongly_predicted_testing_points)
 # list_of_wrong_guesses_trn = [i for i in X_train]
+
+def main():
+    
+    loaded_patch_model = PatchClassificationModel(name="patch_model_rand_sample_10k_points_per_patch-shape-512-512-bs-64")
+    plot_training_history(loaded_patch_model, show=True)
+    pass
+
+if __name__ == "__main__":
+    main()
