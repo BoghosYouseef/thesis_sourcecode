@@ -34,12 +34,12 @@ print(Y_train.shape)
 print(X_test.shape)
 print(Y_test.shape)
 
-layers1 = [2]
-neurons1 = [512, 1024, 2048, 4096]
+layers1 = [2, 4]
+neurons1 = [256, 512, 1024, 2048, 4096]
 opt = tf.keras.optimizers.Adam()
-exp = Experiment(nl=layers1,NN=neurons1, list_epochs=[100], list_batch_sizes=[64],list_optimizers=[opt], regularizer=True)
+exp = Experiment(nl=layers1,NN=neurons1, list_epochs=[5000], list_batch_sizes=[64],list_optimizers=[opt], regularizer=True)
 print(exp.create_combinations_of_settings())
-exp.run((X_train, X_test, Y_train, Y_test),save=True, name="patch_model_rand_sample_0.1_weights_regularizer")
+exp.run((X_train, X_test, Y_train, Y_test),save=True, name="patch_model_full_dataset_weights_regularizer")
 
 # ###############
 # NN_SHAPES = []
