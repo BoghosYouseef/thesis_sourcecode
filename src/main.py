@@ -29,15 +29,15 @@ X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model
 # df = collect_csv_files_into_one_df()
 # X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=0.1, split=0.2, random_state=1)
 # X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2 = get_training_and_testing_data(amount=0.5, split=0.2, model=1) # gets training data for the whole dataset
-print(X_train.shape)
-print(Y_train.shape)
-print(X_test.shape)
-print(Y_test.shape)
+# print(X_train.shape)
+# print(Y_train.shape)
+# print(X_test.shape)
+# print(Y_test.shape)
 
-layers1 = [2, 4]
+layers1 = [2, 3, 4]
 neurons1 = [256, 512, 1024, 2048, 4096]
 opt = tf.keras.optimizers.Adam()
-exp = Experiment(nl=layers1,NN=neurons1, list_epochs=[5000], list_batch_sizes=[64],list_optimizers=[opt], regularizer=True)
+exp = Experiment(nl=layers1,NN=neurons1, list_epochs=[1000], list_batch_sizes=[64],list_optimizers=[opt], regularizer=True)
 print(exp.create_combinations_of_settings())
 exp.run((X_train, X_test, Y_train, Y_test),save=True, name="patch_model_full_dataset_weights_regularizer")
 
@@ -91,11 +91,11 @@ exp.run((X_train, X_test, Y_train, Y_test),save=True, name="patch_model_full_dat
 # plot_data(training_data=wrongly_predicted_training_points, testing_data=wrongly_predicted_testing_points)
 # list_of_wrong_guesses_trn = [i for i in X_train]
 
-def main():
+# def main():
     
-    loaded_patch_model = PatchClassificationModel(name="patch_model_rand_sample_10k_points_per_patch-shape-512-512-bs-64")
-    plot_training_history(loaded_patch_model, show=True)
-    pass
+#     loaded_patch_model = PatchClassificationModel(name="patch_model_rand_sample_10k_points_per_patch-shape-512-512-bs-64")
+#     plot_training_history(loaded_patch_model, show=True)
+#     pass
 
 if __name__ == "__main__":
     main()

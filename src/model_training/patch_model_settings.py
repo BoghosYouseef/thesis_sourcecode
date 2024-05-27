@@ -127,7 +127,7 @@ class PatchClassificationModel:
         
         if save:
                 name = name + "-" + self.__create_file_name()
-                plot_path = os.path.join(get_abs_path(get_relative_saved_plots_folder_path()),f"patch_model/{name}.{ext}")
+                plot_path = os.path.join(get_abs_saved_plots_folder_path(),f"patch_model/{name}.{ext}")
                 plt.savefig(plot_path)
 
         if show:
@@ -137,12 +137,12 @@ class PatchClassificationModel:
 
     def save_(self, name="patch_model"):
         name = name + "-" + self.__create_file_name()
-        path = os.path.join(get_abs_path(get_relative_saved_models_folder_path()),f"{name}.keras")
+        path = os.path.join(get_abs_saved_models_folder_path(),f"{name}.keras")
         self.model.save(path)
     
     def save_training_and_validation_data(self, name="patch_model"):
         name = name + "-" + self.__create_file_name()
-        path = os.path.join(get_abs_path(get_relative_data_folder_path()),f"model_training_history/patch_model/{name}.csv")
+        path = os.path.join(get_patch_model_training_data_folder_path(),f"{name}.csv")
         df = pd.DataFrame(self.history.history)
         with open(path, mode='w') as f:
             df.to_csv(f)
@@ -194,7 +194,7 @@ class Experiment:
             patch_model = PatchClassificationModel(NNShape=NNShape, regularizer=self.regularizer)
             
             patch_model.compile(opt=optimizer_, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'])
-            patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=1)
+            patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=0)
 
             
             if save:
