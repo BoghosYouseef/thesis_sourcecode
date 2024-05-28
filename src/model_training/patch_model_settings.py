@@ -194,7 +194,7 @@ class Experiment:
             patch_model = PatchClassificationModel(NNShape=NNShape, regularizer=self.regularizer)
             
             patch_model.compile(opt=optimizer_, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'])
-            patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=0)
+            patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=1)
 
             
             if save:

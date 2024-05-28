@@ -59,7 +59,11 @@ def split_dfs_for_training_testing_and_recombine(dfs, amount=960000, split=0.2, 
         length = df.shape[0]
        
         if amount > 0:
-            df = df.sample(n=num,random_state=random_state)
+            if type(amount) == int:
+                df = df.sample(n=num,random_state=random_state)
+            elif type(amount) == float:
+                df = df.sample(frac=amount,random_state=random_state)
+
             # limit_amount = int(length*amount)
             # df = df.iloc[:limit_amount]
             length = df.shape[0]
