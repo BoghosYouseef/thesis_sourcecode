@@ -2,8 +2,10 @@
 
 cd ../
 
-py -m venv .venv
+python3 -m venv .venv
+pip install --upgrade pip
+cp ../../requirements.txt ../
 pip install -r requirements.txt
 
 
-py ./src/main.py
+python3 ./src/main.py
