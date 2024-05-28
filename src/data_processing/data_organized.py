@@ -159,7 +159,7 @@ def get_training_and_testing_data_for_sp_model(amount=960000, split=0.2):
 
 
 
-def plot_data(training_data: list[tuple], testing_data: list[tuple]):
+def plot_data(training_data, testing_data):
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(projection='3d')
     

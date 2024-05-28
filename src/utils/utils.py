@@ -37,7 +37,7 @@ def print_training_results():
         print("-"*10)
         print( )
 
-def get_indices_of_largest_N_numbers_in_a_list(list_:list[float])->dict[int:float]:
+def get_indices_of_largest_N_numbers_in_a_list(list_):
     result = {}
     for i in range(len(list_)):
         result[i] = list_[i]
