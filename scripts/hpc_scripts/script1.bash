@@ -4,10 +4,11 @@
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH -c 1
-#SBATCH -G 1
+#SBATCH -G 2
+#SBATCH --qos normal
 #SBATCH --time=01:30:00
 #SBATCH -p gpu
-#SBATCH --mem=10GB
+#SBATCH --mem=2GB
 
 
-python3 src/main.py train -mt p -s 512 512 -e 100 -n patch_model_random_sample_0.1_test
+python3 src/main.py train -mt p -s 512 512 -e 100 -n patch_model_random_sample_0.1_test2
