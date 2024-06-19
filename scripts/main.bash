@@ -4,8 +4,7 @@ cd ../
 
 python3 -m venv .venv
 pip install --upgrade pip
-cp ../../requirements.txt ../
+cp ../requirements.txt .
 pip install -r requirements.txt
 
-
-python3 ./src/main.py
+sbatch scripts/hpc_scripts/script1.bash

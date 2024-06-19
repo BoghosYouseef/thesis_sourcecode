@@ -9,4 +9,5 @@
 #SBATCH -p gpu
 #SBATCH --mem=10GB
 
-python3 .\src\main.py train -s 512 512 -e 100 -n patch_model
+
+python3 src/main.py train -mt p -s 512 512 -e 100 -n patch_model_random_sample_0.1_test
