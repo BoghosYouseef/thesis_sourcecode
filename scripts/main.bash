@@ -1,5 +1,6 @@
 #!/bin/bash
 . backup.bash
+git pull
 . clear_all_generated_data.bash
 cd ../
 #backup patch models data
