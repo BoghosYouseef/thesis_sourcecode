@@ -21,7 +21,7 @@ def collect_csv_files_into_one_df():
         path = os.path.join(data_csv_files_path, i)#all_csv_files[-1])
         READY_CSV = pd.read_csv(path, names=col_names)
         total_size+= len(READY_CSV.index)
-        print("number of rows: ", len(READY_CSV.index), "total: ", total_size)
+        # print("number of rows: ", len(READY_CSV.index), "total: ", total_size)
         dfs.append(READY_CSV)
         
         # for i in READY_CSV['patch'].unique():
@@ -38,7 +38,7 @@ def collect_csv_files_into_one_df():
     # print("final_df.shape before filter: ", final_df.shape)
     # final_df = final_df[(final_df['sp1']>=0)&(final_df['sp1']<=1)&(final_df['sp2']>=0)&(final_df['sp2']<=1)]
     # print("final_df.shape AFTER filter: ", final_df.shape)
-    print("final_df.shape", final_df.shape)
+    # print("final_df.shape", final_df.shape)
     print(final_df.head())
     # print(final_df.tail())
     return final_df
@@ -137,6 +137,32 @@ def get_training_and_testing_data_for_patch_model(amount=960000, split=0.2,rando
     X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
     return X_train, X_test, Y_train, Y_test
 
+def get_training_and_testing_data_and_sample_weights_for_patch_model(amount=960000, split=0.2,random_state=1):
+    df = collect_csv_files_into_one_df()
+    total_number_of_points = len(df.index)
+    dfs = split_df_based_on_patch(df)
+    sample_weights_per_patch = {}
+    # weight for a patch: total_number_of_points/number_of_points_in_a_patch
+    # sum of all weights, divide every weight by the sum
+    print("total number of points: ", total_number_of_points)
+    for i in dfs:
+        patch = i["patch"].iloc[0]
+        sample_weights_per_patch[patch] = total_number_of_points/len(i.index)
+    sum_of_weights = sum(sample_weights_per_patch.values())
+    for key, value in sample_weights_per_patch.items():
+        sample_weights_per_patch[key] = value/sum_of_weights
+        print(f"for patch: {key}, number of samples: {len(dfs[key].index)}| training weight: {sample_weights_per_patch[key]}")
+
+    print("sum of probabilities of training weights: ", sum(sample_weights_per_patch.values()))
+    X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=amount, split=split,random_state=random_state)
+    
+    sample_weights_for_training_data = [sample_weights_per_patch[i] for i in Y_train]
+    sample_weights_for_training_data =  pd.Series(sample_weights_for_training_data)
+    print("first 3 patches: ", Y_train[:3])
+    print("first 3 patches weights: ", sample_weights_for_training_data[:3])
+    return X_train, X_test, Y_train, Y_test, sample_weights_for_training_data
+    
+
 
 def get_training_and_testing_data_for_sp_model(amount=960000, split=0.2):
         df = collect_csv_files_into_one_df()
@@ -212,4 +238,5 @@ def get_N_random_points_per_patch_for_patch_model_training(N, random_state=1, sp
     X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
 
     return X_train, X_test, Y_train, Y_test
+
 

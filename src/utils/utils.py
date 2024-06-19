@@ -1,10 +1,17 @@
 import os
+import re
 import random
+import time
 import numpy as np
 import pandas as pd
+import collections
+from pathlib import Path
+from utils.path_funcs import *
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
-from utils.path_funcs import get_patch_model_training_data_folder_path
+import matplotlib.ticker as ticker
+import model_training.patch_model_settings 
+
 
 def isEven(n):
     return n % 2 == 0
@@ -57,14 +64,16 @@ def get_top_N_largest_nums_indices_in_list(list_, N=5):
     return result
 
 
-def plot_training_history(loaded_model,func='loss',name='', save=False,add_to_title='' ,ext='jpg', show=True):
-    batch_size = get_batch_size_from_name(loaded_model.name)
-    title = f"{func} over 100 epochs"
-    print("loaded_model.history: ", loaded_model.history)
-    print("loaded_model.history.keys(): ", loaded_model.history.keys())
-    print("loaded_model.history.head(): ", loaded_model.history.head())
-    data1 = loaded_model.history[func].tolist()
-    data2 = loaded_model.history[f"val_{func}"].tolist()
+def plot_training_history(model_name,func='loss',plot_name_and_abs_path='',add_to_title='' ,
+                          ext='jpg', show=True, y_range=(1e-4,2e+0)):
+    path_to_csv = get_patch_model_training_data_file_abs_path_by_model_name(model_name)
+    df = pd.read_csv(path_to_csv)
+    title = f"{func} over {len(df.index)} epochs"
+    # print("loaded_model.history: ", loaded_model.history)
+    # print("loaded_model.history.keys(): ", loaded_model.history.keys())
+    # print("loaded_model.history.head(): ", loaded_model.history.head())
+    data1 = df[func].tolist()
+    data2 = df[f"val_{func}"].tolist()
     # print("data1: ", data1)
     lowest_point1 = (len(data1)-1, data1[-1])
     lowest_point2 = (len(data2)-1, data2[-1])
@@ -72,7 +81,7 @@ def plot_training_history(loaded_model,func='loss',name='', save=False,add_to_ti
 
    
     if func != 'loss':
-        title = f"Accuracy over {100} epochs"
+        title = f"Accuracy over {len(df.index)} epochs"
     
     if add_to_title != '':
         title = title + "\n" + add_to_title
@@ -82,7 +91,7 @@ def plot_training_history(loaded_model,func='loss',name='', save=False,add_to_ti
     fig.set_figwidth(15)
     # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_yscale("log")
-    # ax.set_ylim(bottom=1e-2,top=2e+0)
+    ax.set_ylim(bottom=y_range[0],top=y_range[1])
     plt.tick_params(axis='y', which='minor')
     ax.yaxis.set_minor_formatter(FormatStrFormatter("%.3f"))
 
@@ -106,13 +115,74 @@ def plot_training_history(loaded_model,func='loss',name='', save=False,add_to_ti
     ax.grid(True,which="both") 
     ax.set_title(title)
     ax.set_xlabel("epochs")
-    ax.set_xticks(np.arange(0,100+1, 5))
+    # ax.set_xticks(np.arange(0,100+1, 5))
     ax.set_ylabel(func)
+
+    if plot_name_and_abs_path:
+        print(f"plot_name_and_abs_path: {plot_name_and_abs_path}")
+        plt.savefig(plot_name_and_abs_path)
     if show:
-            plt.show()
+        plt.show()
 
 
 def get_batch_size_from_name(name):
-    batch_size = name.split("-")[0].replace(".csv","")
-    batch_size = name.replace(".keras","")
-    return batch_size
+    pattern = r"bs\-([0-9]*)"
+    batch_size = re.search(pattern=pattern, string=name)
+    return batch_size.group(1)
+
+def get_shape_from_name(name):
+    pattern = r"shape(\-([0-9]*))*"
+
+    shape = re.search(pattern=pattern, string=str(name))
+    shape = shape.group(0).replace("shape", "")
+    shape = shape[1:]
+    return shape
+
+def re_enumerate_epochs_in_csv_file(csv_file_path):
+    df = pd.read_csv(csv_file_path, index_col=False)
+    # print(f"df before:\n{df}")
+    df.index = pd.RangeIndex(start=0, stop=len(df), step=1)
+    df = df.drop('epoch', axis=1)
+    df = df.reset_index().rename(columns={'index': 'epoch'})
+    # print(f"df after:\n{df}")
+    df.to_csv(csv_file_path, index=False)
+
+
+def bar_plot_patch_model_performance_for_all_patches(patch_model_name, data, plot_name=None):
+    t1 = time.time()
+    X_train, X_test, Y_train, Y_test = data
+    # patch_model_abs_path = get_abs_saved_patch_models_folder_path_with_model_name(patch_model_name)
+    patch_model = model_training.patch_model_settings.PatchClassificationModel(name=patch_model_name)
+    predictions = patch_model.predict(X_test)
+    patches = [i for i in range(96)]
+    Y_train = Y_train.numpy().tolist()
+    # print("Y_train = ", Y_train)
+    # print("Y_train.numpy().tolist() = ", Y_train.numpy().tolist())
+    training_samples_per_patch = dict(sorted(collections.Counter(Y_train).items()))
+    print(f"training_samples_per_patch: ", training_samples_per_patch)
+    correct_predictions = list(dict(sorted(collections.Counter([predictions[i] for i in range(len(predictions)) if Y_test[i] == predictions[i]]).items())).values())
+    incorrect_predictions = list(dict(sorted(collections.Counter([predictions[i] for i in range(len(predictions)) if Y_test[i] != predictions[i]]).items())).values())
+    print(f"correct_predictions: {correct_predictions}")
+    print(f"incorrect_predictions: {incorrect_predictions}")
+    predictions = {
+        "correctly predicted": correct_predictions,
+        "incorrectly predicted": incorrect_predictions
+    }
+    width=1.5
+    fig, ax = plt.subplots(figsize=(20, 10))
+    factor = 4
+    ax.bar([factor*i for i in training_samples_per_patch.keys()], training_samples_per_patch.values(), color="orange", width=width, label="Training points")
+    ax.bar([(factor*i + width) for i in patches], predictions["correctly predicted"], width=width, label="Correctly predicted", color="green")
+    ax.bar([(factor*i + width) for i in patches], predictions["incorrectly predicted"], width=width, label="Incorrectly predicted", bottom=predictions["correctly predicted"], color="red")
+
+    ax.set_title("Number of points used for training compared to numbers of correct and incorrect predictions on validation data")
+    ax.set_xticks([factor*i for i in training_samples_per_patch.keys()])
+    
+    ax.set_xticklabels(([str(i) for i in patches]), rotation=90)
+    ax.legend(loc="upper right")
+    print(f"total time in seconds: {time.time() - t1}")
+    print(f"name: {plot_name}")
+    if plot_name is not None:
+        plt.savefig(plot_name)
+    plt.show()
+    

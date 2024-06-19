@@ -4,28 +4,41 @@ import itertools
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from pathlib import Path
 from utils.path_funcs import *
 from tensorflow.keras import layers
+from keras.callbacks import CSVLogger, ModelCheckpoint
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.ticker import FormatStrFormatter
-from utils.utils import get_top_N_largest_nums_indices_in_list
+import utils.utils as utils
 from utils.path_funcs import *
 from data_processing.data_organized import collect_csv_files_into_one_df, get_training_and_testing_data_for_patch_model
 
 
 class PatchClassificationModel:
     def __init__(self, NNShape=[], diamond=False, regularizer=False, name=""):
-        
+        self.settings = {}
         if name:
             try:
+                print("IN TRY")
                 self.name = name
+                
                 model_path = get_abs_saved_patch_models_folder_path_with_model_name(name)
-                training_history_csv_path = get_patch_model_training_data_file_abs_path_by_model_name(name)
+                # full_name = str(model_path).replace("\\", " ")
+                # full_name =  full_name.replace("/", " ")
+                # full_name =  full_name.split(" ")
+                # full_name = str(full_name[-1])
+                
+                print("Model path: ", model_path)
+                # print("full_name: ", full_name)
+                # training_history_csv_path = get_patch_model_training_data_file_abs_path_by_model_name(name)
                 self.model = keras.models.load_model(model_path)
-                colnames = ['epoch', 'loss', 'accuracy', 'val_loss', 'val_accuracy']
-                self.history = pd.read_csv(training_history_csv_path,names=colnames, header=0)
+                # colnames = ['epoch', 'loss', 'accuracy', 'val_loss', 'val_accuracy']
+                # self.history = pd.read_csv(training_history_csv_path,names=colnames, header=0)
+                self.settings["shape"] = utils.get_shape_from_name(str(model_path))
+                self.settings["batch_size"] = utils.get_batch_size_from_name(str(model_path))
                 
             except FileNotFoundError as error:
                 print(f"{error}")
@@ -55,38 +68,118 @@ class PatchClassificationModel:
                     self.settings = {"shape":f"{num_of_neurons}-"*len(NNShape)}
 
 
-    def compile(self,opt, loss_, metrics_):
+    def compile(self,opt, loss_, metrics_, sample_weight=True):
         self.settings['optimizer'] = opt._name
         self.settings['loss'] = loss_
         self.settings['metrics'] = metrics_
 
-        self.model.compile(optimizer=opt, loss=loss_, metrics=metrics_)
+        if sample_weight:
+            print("self.model = ", self.model)
+            self.model.compile(optimizer=opt, loss=loss_, metrics=metrics_, weighted_metrics=["accuracy"])
+        else:
+            self.model.compile(optimizer=opt, loss=loss_, metrics=metrics_)
 
-    def train(self, data, epochs_=5, batch_size_=256, verbose_=1):
+    def retrain_existing_model(self, data, epochs_=5, batch_size_=64, verbose_=1, name=None, sample_weights=None, replace=True):
+        
         X_train, X_test, Y_train, Y_test = data
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_)
-        self.settings["epochs"] = epochs_
-        self.settings["shuffle"] = True
-        self.settings["batch_size"] = batch_size_
+        if "epoch" not in self.settings:
+            self.settings["epoch"] = epochs_
+        if "shuffle" not in self.settings:
+            self.settings["shuffle"] = True
+        if "batch_size" not in self.settings:
+            self.settings["batch_size"] = batch_size_
 
-    def predict(self, point, expected_patch):
+        try:
+            if name is None:
+                raise NameError
+            else:
+                path_to_saved_model = get_abs_saved_patch_models_folder_path_with_model_name(name=name)
+                model_training_history = get_patch_model_training_data_file_abs_path_by_model_name(name=name)
+
+                csv_logger = CSVLogger(model_training_history, append=True)
+                model_check_point = ModelCheckpoint(path_to_saved_model)
+                try:
+                    if sample_weights is not None:
+                        print("using sample weights " + "-#-"*10)
+                        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point], sample_weight=sample_weights)
+                    else:
+                        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point])
+
+                except KeyboardInterrupt as error:
+                    print("Training of model stopped!")
+                    print(f"path to model: {path_to_saved_model}")
+                    print(f"path to model training history: {model_training_history}")
+
+                finally:
+                    print("re-enumerating the epochs...")
+                    utils.re_enumerate_epochs_in_csv_file(model_training_history)
+    
+        except NameError as err:
+            print("name of model not found in training folder.")
+        
+    def train(self, data, epochs_=5, batch_size_=64, verbose_=1, name=None, sample_weights=None):
+        X_train, X_test, Y_train, Y_test = data
+        if "epoch" not in self.settings:
+            self.settings["epoch"] = epochs_
+        if "shuffle" not in self.settings:
+            self.settings["shuffle"] = True
+        if "batch_size" not in self.settings:
+            self.settings["batch_size"] = batch_size_
+
+        if name is not None:
+            name = name+ "-" + self.__create_file_name()
+            path_training_history = Path(os.path.join(get_patch_model_training_data_folder_path(),name+".csv"))
+            path_to_saved_model = Path(os.path.join(get_abs_saved_models_folder_path(),name+".keras"))
+            try:
+                
+                csv_logger = CSVLogger(path_training_history)
+                model_check_point = ModelCheckpoint(path_to_saved_model)
+                if sample_weights is not None:
+                    print("using sample weights " + "-#-"*10)
+                    self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point], sample_weight=sample_weights)
+                else:
+                    self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point])
+                # re_enumerate_epochs_in_csv_file(path_training_history)
+            except KeyboardInterrupt:
+                print("Training of model stopped!")
+                print(f"path to model: {path_to_saved_model}")
+                print(f"path to model training history: {path_training_history}")
+            
+
+
+        
+    def predict_1_point(self, point, expected_patch):
         tensor_point = tf.convert_to_tensor([point])
         predicted_patch = np.argmax(self.model.predict(tensor_point))
         print(f"expected patch: {expected_patch}")
         print(f"predicted patch: {predicted_patch}")
         return [expected_patch, predicted_patch]
-    
-    def plot(self,func='loss',name='', save=False,add_to_title='' ,ext='jpg', show=True):
 
-        title = f"{func} over {self.settings['epochs']} epochs"
-        data1 = self.history.history[func]
-        data2 = self.history.history[f'val_{func}']
-        lowest_point1 = (len(data1)-1, data1[-1])
-        lowest_point2 = (len(data2)-1, data2[-1])
+    def predict(self, points):
+        predictions = self.model.predict(points)
+        predicted_patches = [np.argmax(i) for i in predictions]
+        return predicted_patches
+    
+    def plot(self,func='loss',name='', save=False,add_to_title='' ,ext='jpg', show=True, loaded_model=False):
+
+        if loaded_model:
+            title = f"{func} over {len(self.history['epoch'].index)} epochs"
+            data1 = self.history[func].tolist()
+            data2 = self.history[f'val_{func}'].tolist()
+            lowest_point1 = (len(data1)-1, data1[-1])
+            lowest_point2 = (len(data2)-1, data2[-1])
+            
+
+        else:
+            title = f"{func} over {self.settings['epoch']} epochs"
+            data1 = self.history.history[func]
+            data2 = self.history.history[f'val_{func}']
+            lowest_point1 = (len(data1)-1, data1[-1])
+            lowest_point2 = (len(data2)-1, data2[-1])
 
 
         if func != 'loss':
-            title = f"Accuracy over {self.settings['epochs']} epochs"
+            title = f"Accuracy over {self.settings['epoch']} epochs"
         
         if add_to_title != '':
             title = title + "\n" + add_to_title
@@ -95,10 +188,11 @@ class PatchClassificationModel:
         fig.set_figheight(8)
         fig.set_figwidth(15)
         # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.set_yticks(np.arange(1e-3, 2e+0, step=0.05))
-        ax.set_yticklabels([str(i) for i in np.arange(1e-3, 2e+0, step=10)])
         ax.set_yscale("log")
-        # ax.set_ylim(bottom=1e-3,top=2e+0)
+        ax.set_ylim(bottom=1e-2,top=2e+0)
+        ax.set_yticks(np.arange(1e-2,2e+0, 0.1))
+        plt.tick_params(axis='y', which='minor')
+        ax.yaxis.set_minor_formatter(FormatStrFormatter("%.3f"))
 
         text1 = str(lowest_point1[1])
         text2 = str(lowest_point2[1])
@@ -120,14 +214,18 @@ class PatchClassificationModel:
         ax.grid(True,which="both") 
         ax.set_title(title)
         ax.set_xlabel("epochs")
-        ax.set_xticks(np.arange(0,self.settings['epochs']+1, 5))
+        # ax.set_xticks(np.arange(0,len(data1)+1, len(data1)//10))
         ax.set_ylabel(func)
-        ax.yaxis.set_minor_formatter(FormatStrFormatter("%.3f"))
-        plt.tick_params(axis='y', which='minor')
         
         if save:
-                name = name + "-" + self.__create_file_name()
-                plot_path = os.path.join(get_abs_saved_plots_folder_path(),f"patch_model/{name}.{ext}")
+                try:
+                    if self.__create_file_name():
+                        name = name + "-" + self.__create_file_name()
+                except AttributeError:
+                    pass
+                
+                plot_path = Path(os.path.join(get_abs_saved_plots_folder_path(),f"patch_model/{name}.{ext}"))
+                # print("path to be saved: ", plot_path)
                 plt.savefig(plot_path)
 
         if show:
@@ -136,13 +234,16 @@ class PatchClassificationModel:
 
 
     def save_(self, name="patch_model"):
-        name = name + "-" + self.__create_file_name()
-        path = os.path.join(get_abs_saved_models_folder_path(),f"{name}.keras")
+
+ 
+
+        path = Path(os.path.join(get_abs_saved_models_folder_path(),f"{name}.keras"))
+        
         self.model.save(path)
     
     def save_training_and_validation_data(self, name="patch_model"):
         name = name + "-" + self.__create_file_name()
-        path = os.path.join(get_patch_model_training_data_folder_path(),f"{name}.csv")
+        path = Path(os.path.join(get_patch_model_training_data_folder_path(),f"{name}.csv"))
         df = pd.DataFrame(self.history.history)
         with open(path, mode='w') as f:
             df.to_csv(f)
@@ -151,8 +252,14 @@ class PatchClassificationModel:
         for key, value in self.settings.items():
             print(f"{key}:{value}")
     
+    
     def __create_file_name(self):
-        return f"shape-{self.settings['shape']}bs-{self.settings['batch_size']}"
+        try:
+            print("self.settings: ", self.settings)
+            return f"shape-{self.settings['shape']}bs-{self.settings['batch_size']}"
+        
+        except AttributeError:
+            return ""
 
 
 
@@ -194,7 +301,7 @@ class Experiment:
             patch_model = PatchClassificationModel(NNShape=NNShape, regularizer=self.regularizer)
             
             patch_model.compile(opt=optimizer_, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'])
-            patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=1)
+            patch_model.train((X_train, X_test, Y_train, Y_test),epochs_, batch_size_, verbose_=1, name=name)
 
             
             if save:
