@@ -214,7 +214,7 @@ def main():
     train_parser.add_argument('-s','--shape', type=int,nargs='+', help='<Required> Set Number of hidden layers and their nodes', required=True)
     train_parser.add_argument('-mt','--model-type', type=str, help='<Required> Set type of model to train', required=True)
     train_parser.add_argument('-w','--weights', help='<Optional> Set whether to train model with sample_weights', action='store_true')
-    train_parser.add_argument('-ds','--data-set', help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
+    train_parser.add_argument('-ds','--data-set',type=int, help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
     train_parser.add_argument('-r','--regularizer', help='<Optional> Set whether to train model with an L2 regularizer on the output layer', action='store_true')
     train_parser.add_argument('-e','--epochs', type=int,help='<Required> Set number of epochs to train the new model', required=True)
     train_parser.add_argument('-n','--name', type=str,help='<Required> Set name-prefix for the training history and model files', required=True)
@@ -226,7 +226,7 @@ def main():
     # train_parser.add_argument('-s','--shape', type=int,nargs='+', help='<Required> Set Number of hidden layers and their nodes', required=True)
     retrain_parser.add_argument('-mt','--model-type', type=str, help='<Required> Set type of model to train', required=True)
     retrain_parser.add_argument('-w','--weights', help='<Optional> Set whether to train model with sample_weights', action='store_true')
-    retrain_parser.add_argument('-ds','--data-set', help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
+    retrain_parser.add_argument('-ds','--data-set',type=int, help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
     retrain_parser.add_argument('-r','--regularizer',  help='<Optional> Set whether to train model with an L2 regularizer on the output layer', action='store_true')
     retrain_parser.add_argument('-e','--epochs', type=int,help='<Required> Set number of epochs to train the new model', required=True)
     retrain_parser.add_argument('-n','--name', type=str,help='<Required> Set name-prefix for the training history and model files', required=True)
@@ -247,17 +247,17 @@ def main():
 
 if __name__ == "__main__":
     # utils.print_avg_last_20_training_epochs_with_std()
-    # main()
+    main()
     # X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=0.1, split=0.2, random_state=1) # gets training data for the whole dataset
     # opt = tf.keras.optimizers.Adam()
 
-    model_name = "patch_model_rand_sample_0.1--shape-512-512-bs-64-copy1"
+    # model_name = "patch_model_rand_sample_0.1--shape-512-512-bs-64-copy1"
     # loaded_patch_model = PatchClassificationModel(name=model_name)
     # new_model_with_regularizer_and_weights = PatchModelUtils.add_L2_regularizer_to_output_layer_by_creating_a_new_model(patch_model=loaded_patch_model)
     # new_model_with_regularizer_and_weights.compile(opt=opt, loss_="sparse_categorical_crossentropy", metrics_=["accuracy"])
     # new_model_with_regularizer_and_weights.retrain_existing_model(data=(X_train, X_test, Y_train, Y_test), epochs_=100,name=model_name)
 
-    utils.plot_training_history(model_name=model_name)
+    # utils.plot_training_history(model_name=model_name)
 
     # add_L2_regularization_to_output_layer_for_loaded_patch_model(model=model)
     # name = "testing-model-check-point-callback"
