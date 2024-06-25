@@ -13,6 +13,7 @@ pip install --upgrade pip
 cp ../requirements.txt .
 pip install -r requirements.txt
 
+chmod +x scripts/hpc_scripts/*.bash
 
 for f in scripts/hpc_scripts/*.bash; do
     sbatch "$f"

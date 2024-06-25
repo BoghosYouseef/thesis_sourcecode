@@ -11,4 +11,4 @@
 #SBATCH --mem=10GB
 
 
-python3 ../../main.py train -mt p -s 512 512 -e 200000 -n patch_model_full_data_set_regularizer -ds 0 -r
+python3 main.py train -mt p -s 512 512 -e 200000 -n patch_model_full_data_set_regularizer -ds 0 -r
