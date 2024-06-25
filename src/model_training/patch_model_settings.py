@@ -5,16 +5,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from pathlib import Path
-from utils.path_funcs import *
 from tensorflow.keras import layers
 from keras.callbacks import CSVLogger, ModelCheckpoint
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.ticker import FormatStrFormatter
-import utils.utils as utils
-from utils.path_funcs import *
-from data_processing.data_organized import collect_csv_files_into_one_df, get_training_and_testing_data_for_patch_model
+from ..utils import utils
+from ..utils.path_funcs import *
+from ..data_processing.data_organized import collect_csv_files_into_one_df, get_training_and_testing_data_for_patch_model
 
 
 class PatchClassificationModel:
@@ -22,7 +21,6 @@ class PatchClassificationModel:
         self.settings = {}
         if name:
             try:
-                print("IN TRY")
                 self.name = name
                 
                 model_path = get_abs_saved_patch_models_folder_path_with_model_name(name)
@@ -38,6 +36,7 @@ class PatchClassificationModel:
                 # colnames = ['epoch', 'loss', 'accuracy', 'val_loss', 'val_accuracy']
                 # self.history = pd.read_csv(training_history_csv_path,names=colnames, header=0)
                 self.settings["shape"] = utils.get_shape_from_name(str(model_path))
+                self.settings["shape_as_list"] = utils.get_shape_from_name_as_list(str(model_path))
                 self.settings["batch_size"] = utils.get_batch_size_from_name(str(model_path))
                 
             except FileNotFoundError as error:
@@ -68,7 +67,7 @@ class PatchClassificationModel:
                     self.settings = {"shape":f"{num_of_neurons}-"*len(NNShape)}
 
 
-    def compile(self,opt, loss_, metrics_, sample_weight=True):
+    def compile(self,opt, loss_, metrics_, sample_weight=False):
         self.settings['optimizer'] = opt._name
         self.settings['loss'] = loss_
         self.settings['metrics'] = metrics_
@@ -79,7 +78,7 @@ class PatchClassificationModel:
         else:
             self.model.compile(optimizer=opt, loss=loss_, metrics=metrics_)
 
-    def retrain_existing_model(self, data, epochs_=5, batch_size_=64, verbose_=1, name=None, sample_weights=None, replace=True):
+    def retrain_existing_model(self, data, epochs_=5, batch_size_=64, verbose_=1, name=None, sample_weights=None):
         
         X_train, X_test, Y_train, Y_test = data
         if "epoch" not in self.settings:
@@ -95,7 +94,7 @@ class PatchClassificationModel:
             else:
                 path_to_saved_model = get_abs_saved_patch_models_folder_path_with_model_name(name=name)
                 model_training_history = get_patch_model_training_data_file_abs_path_by_model_name(name=name)
-
+                
                 csv_logger = CSVLogger(model_training_history, append=True)
                 model_check_point = ModelCheckpoint(path_to_saved_model)
                 try:
@@ -146,6 +145,22 @@ class PatchClassificationModel:
                 print(f"path to model training history: {path_training_history}")
             
 
+    def add_L2_regularizer_to_output_layer(self):
+        last_layer = self.model.get_layer(index=-1)
+        last_layer_weights = last_layer.get_weights()
+        new_last_layer_with_l2_regularizer = layers.Dense(96, activation='softmax', kernel_regularizer='l2', name="output")
+        # new_last_layer_with_l2_regularizer.set_weights(last_layer_weights)
+        # print("###model summary before :", )
+        # self.model.summary()
+        # print("###model summary after pop: ")
+        self.model.pop()
+        # self.model.summary()
+        # print("##model summary after add: ")
+        self.model.add(new_last_layer_with_l2_regularizer)
+        self.model.layers[-1].set_weights(last_layer_weights)
+        # self.model.summary()
+
+
 
         
     def predict_1_point(self, point, expected_patch):
@@ -162,6 +177,9 @@ class PatchClassificationModel:
     
     def plot(self,func='loss',name='', save=False,add_to_title='' ,ext='jpg', show=True, loaded_model=False):
 
+        model_training_history = get_patch_model_training_data_file_abs_path_by_model_name(name=self.name)
+        self.settings["epoch"] = len(pd.read_csv(model_training_history).index)
+        print(self.settings)
         if loaded_model:
             title = f"{func} over {len(self.history['epoch'].index)} epochs"
             data1 = self.history[func].tolist()
@@ -319,7 +337,7 @@ class Experiment:
         
 # class PatchModelWeightsTrained
 
-class Utils:
+class PatchModelUtils:
 
     @classmethod
     def check_which_subsequent_guesses_are_correct(cls, path):
@@ -340,7 +358,7 @@ class Utils:
 
         predictions = patch_model.predict(X_test)
         print("len of predictions: ", len(predictions))
-        predictions_and_index_list = [get_top_N_largest_nums_indices_in_list(i,N=96) for i in predictions]
+        predictions_and_index_list = [utils.get_top_N_largest_nums_indices_in_list(i,N=96) for i in predictions]
         
         expectations = Y_test
         for i in range(len(predictions_and_index_list)):
@@ -366,5 +384,14 @@ class Utils:
         print("model.layers: ", patch_model.model.layers)
 
 
+    @classmethod
+    def add_L2_regularizer_to_output_layer_by_creating_a_new_model(cls, patch_model):
+        shape = patch_model.settings["shape_as_list"]
+        new_patch_model_with_regularizer = PatchClassificationModel(NNShape=shape, regularizer=True)
+        old_model_weights = patch_model.model.get_weights()
+        
+        new_patch_model_with_regularizer.model.set_weights(old_model_weights)
+        
+        return new_patch_model_with_regularizer
     # def l1_reg(weight_matrix):
     #     return 0.01 * ops.sum(ops.absolute(weight_matrix))

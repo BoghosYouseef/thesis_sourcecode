@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import tensorflow as tf
-from utils.path_funcs import *
+from ..utils.path_funcs import *
 from matplotlib import pyplot as plt
 # from importlib_resources import contents
 

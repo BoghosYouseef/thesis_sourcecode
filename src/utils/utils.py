@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 import collections
 from pathlib import Path
-from utils.path_funcs import *
+from .path_funcs import *
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib.ticker as ticker
-import model_training.patch_model_settings 
+from ..model_training import patch_model_settings 
 
 
 def isEven(n):
@@ -138,6 +138,15 @@ def get_shape_from_name(name):
     shape = shape[1:]
     return shape
 
+def get_shape_from_name_as_list(name):
+    pattern = r"shape(\-([0-9]*))*"
+
+    shape = re.search(pattern=pattern, string=str(name))
+    shape = shape.group(0).replace("shape", "")
+    shape = shape[1:]
+    shape = [int(i) for i in shape.split("-") if i]
+    return shape
+
 def re_enumerate_epochs_in_csv_file(csv_file_path):
     df = pd.read_csv(csv_file_path, index_col=False)
     # print(f"df before:\n{df}")
@@ -152,7 +161,7 @@ def bar_plot_patch_model_performance_for_all_patches(patch_model_name, data, plo
     t1 = time.time()
     X_train, X_test, Y_train, Y_test = data
     # patch_model_abs_path = get_abs_saved_patch_models_folder_path_with_model_name(patch_model_name)
-    patch_model = model_training.patch_model_settings.PatchClassificationModel(name=patch_model_name)
+    patch_model = patch_model_settings.PatchClassificationModel(name=patch_model_name)
     predictions = patch_model.predict(X_test)
     patches = [i for i in range(96)]
     Y_train = Y_train.numpy().tolist()
@@ -183,6 +192,28 @@ def bar_plot_patch_model_performance_for_all_patches(patch_model_name, data, plo
     print(f"total time in seconds: {time.time() - t1}")
     print(f"name: {plot_name}")
     if plot_name is not None:
-        plt.savefig(plot_name)
-    plt.show()
+        plt.savefig(plot_name+".jpeg")
+    # plt.show()
     
+
+def print_avg_last_20_training_epochs_with_std():
+    abs_training_path = get_patch_model_training_data_folder_path()
+    all_training_history_csv_files = os.listdir(abs_training_path)
+
+    for file_name in all_training_history_csv_files:
+        print("Current file: ", file_name)
+        print( )
+        full_file_path = Path(os.path.join(abs_training_path, file_name))
+        file = pd.read_csv(full_file_path)
+        val_loss_mean = file.loc[-20:, "val_loss"].mean()
+        val_loss_std = file.loc[-20:, "val_loss"].std()
+        trn_loss_mean = file.loc[-20:, "loss"].mean()
+        trn_loss_std = file.loc[-20:, "loss"].std()
+        print("val_loss mean: ","{:.6f}".format(val_loss_mean))
+        print("val_loss std: ","{:.6f}".format(val_loss_std))
+        print("trn_loss mean: ","{:.6f}".format(trn_loss_mean))
+        print("trn_loss std: ","{:.6f}".format(trn_loss_std))
+        print("table info val_loss: " + str("{:.6f}".format(val_loss_mean)) + " " + u'\u00B1' + " " + str("{:.6f}".format(val_loss_std)))
+        print("table info trn_loss: " + str("{:.6f}".format(trn_loss_mean)) + " " + u'\u00B1' + " " + str("{:.6f}".format(trn_loss_std)))
+        print("-"*10)
+        print( )

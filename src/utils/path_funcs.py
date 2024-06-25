@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from utils.decorators import make_output_path_obj
+from .decorators import make_output_path_obj
 
 # from importlib_resources import path 
 @make_output_path_obj
