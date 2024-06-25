@@ -14,5 +14,7 @@ cp ../requirements.txt .
 pip install -r requirements.txt
 
 
+for f in scripts/hpc_scripts/*.bash; do
+    sbatch "$f"
+done
 
-sbatch scripts/hpc_scripts/script1.bash
