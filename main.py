@@ -16,12 +16,21 @@ from keras.utils import to_categorical
 from src.model_training.patch_model_settings import Experiment
 from src.model_training.patch_model_settings import PatchClassificationModel
 from src.model_training.patch_model_settings import PatchModelUtils
-from src.model_training.surface_points_model_settings import SurfacePointsModel
-from src.data_processing.data_organized import get_training_and_testing_data_for_patch_model, collect_csv_files_into_one_df, split_df_based_on_patch,create_patch_model_training_data, plot_data, plot_bar_points_per_patch, get_N_random_points_per_patch_for_patch_model_training,get_training_and_testing_data_and_sample_weights_for_patch_model
+from src.model_training.surface_points_model_settings import SurfacePointsModel, SurfacePointsModelForOnePatch
+from src.data_processing.data_organized import get_training_and_testing_data_for_patch_model, collect_csv_files_into_one_df,\
+      split_df_based_on_patch,create_patch_model_training_data, plot_data, plot_bar_points_per_patch,\
+          get_N_random_points_per_patch_for_patch_model_training,get_training_and_testing_data_and_sample_weights_for_patch_model,\
+          get_training_and_testing_data_for_surface_point_model_for_one_patch
 from src.utils.path_funcs import get_abs_saved_models_folder_path, get_abs_path, get_abs_raw_data_folder_path, get_abs_path_of_package_root
 # from model_training.patch_model_settings import Utils
 from tests.unit_tests.add_L2_regularizer_to_output_layer_of_patch_classification_model_test import *
+from src.utils.decorators import cprofile_function
 # from ...src.model_training.patch_model_settings import PatchModelUtils
+
+import cProfile
+import pstats
+import io
+from contextlib import redirect_stdout
 
 
 # 10k points per patch = 960000 | full dataset = 8 960 000
@@ -110,6 +119,7 @@ from tests.unit_tests.add_L2_regularizer_to_output_layer_of_patch_classification
 # plot_data(training_data=wrongly_predicted_training_points, testing_data=wrongly_predicted_testing_points)
 # list_of_wrong_guesses_trn = [i for i in X_train]
 
+
 def train_new_patch_model_raw(shape=None, name=None, epochs=100, verbose=None, regularizer=False, data_set_amount=0.1): #default: shape=None, name=None, epochs=100
     if verbose is not None:
         print(f"Now training a raw new patch model.")
@@ -121,20 +131,37 @@ def train_new_patch_model_raw(shape=None, name=None, epochs=100, verbose=None, r
     opt = tf.keras.optimizers.Adam()
     patch_model = PatchClassificationModel(NNShape=shape,regularizer=regularizer)
     patch_model.compile(opt=opt, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'], sample_weight=False)
-    patch_model.train((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=1, name=name)
+    patch_model.train((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=verbose, name=name)
+
+def train_new_surface_points_model_raw(shape=None, name=None, epochs=100, verbose=None, regularizer=False, data_set_amount=0.1): #default: shape=None, name=None, epochs=100
+    if verbose is not None:
+        print(f"Now training a raw new surface points model.")
+        print(f"Model shape: {shape}, Epochs: {epochs}, Name: {name}")
+    
+    X_train_points, Y_train_sp, X_test_points, Y_test_sp = get_training_and_testing_data_for_surface_point_model_for_one_patch(patch=25,amount=data_set_amount, split=0.2, random_state=1)
+    print(
+        f"""
+        X_train_points.shape = {X_train_points.shape}
+        Y_train_sp.shape = {Y_train_sp.shape}
+        X_test_points.shape = {X_test_points.shape}
+        Y_test_sp.shape = {Y_test_sp.shape}
+        """
+    )
+    opt = tf.keras.optimizers.Adam()
+    sp_model = SurfacePointsModelForOnePatch(NNShape=shape,regularizer=regularizer)
+    sp_model.compile(opt=opt, loss_="mae", metrics_=["mae"])
+    sp_model.train((X_train_points, X_test_points,  Y_train_sp, Y_test_sp), epochs, batch_size_=64, verbose_=verbose, name=name)
 
 
-def retrain_existing_patch_model_raw(name=None, epochs=100, verbose=None, regularizer=False,data_set_amount=0.1):
+def retrain_existing_patch_model_raw(name=None, epochs=100, verbose=None,data_set_amount=0.1):
     if verbose is not None:
         print(f"Now training an existing patch model.")
         print(f"Epochs: {epochs}, name: {name}")
     X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=data_set_amount, split=0.2, random_state=1) # gets training data for the whole dataset
     opt = tf.keras.optimizers.Adam()
     patch_model = PatchClassificationModel(name=name)
-    if regularizer:
-        patch_model.add_L2_regularizer_to_output_layer()
     patch_model.compile(opt=opt, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'], sample_weight=False)
-    patch_model.retrain_existing_model((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=1, name=name)
+    patch_model.retrain_existing_model((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=verbose, name=name)
 
 
 def train_new_patch_model_with_sample_weights(shape=None, name=None, epochs=100,verbose=None, regularizer=False, data_set_amount=0.1):
@@ -145,53 +172,51 @@ def train_new_patch_model_with_sample_weights(shape=None, name=None, epochs=100,
     opt = tf.keras.optimizers.Adam()
     patch_model = PatchClassificationModel(NNShape=shape, regularizer=regularizer)
     patch_model.compile(opt=opt, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'], sample_weight=True)
-    patch_model.train((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=1, name=name, sample_weights=sample_weights_for_training_data)
+    patch_model.train((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=verbose, name=name, sample_weights=sample_weights_for_training_data)
 
 
-def retrain_existing_patch_model_with_sample_weights(name=None, epochs=100, verbose=None, regularizer=False, data_set_amount=0.1):
+def retrain_existing_patch_model_with_sample_weights(name=None, epochs=100, verbose=None, data_set_amount=0.1):
     if verbose is not None:
         print(f"Now training an existing patch model with sample_weights.")
         print(f"epochs: {epochs}, name: {name}")
     X_train, X_test, Y_train, Y_test, sample_weights_for_training_data = get_training_and_testing_data_and_sample_weights_for_patch_model(amount=data_set_amount, split=0.2, random_state=1)
     opt = tf.keras.optimizers.Adam()
     patch_model = PatchClassificationModel(name=name)
-    if regularizer:
-        patch_model.add_L2_regularizer_to_output_layer()
     patch_model.compile(opt=opt, loss_="sparse_categorical_crossentropy", metrics_=['accuracy'], sample_weight=True)
-    patch_model.retrain_existing_model((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=1, name=name, sample_weights=sample_weights_for_training_data)
+    patch_model.retrain_existing_model((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=verbose, name=name, sample_weights=sample_weights_for_training_data)
 
 
 def train(args):
+    shape = args.shape
+    epochs = args.epochs
+    name = args.name
+    regularizer = args.regularizer
+    verbose = args.verbose
+    data_set_amount = args.data_set
     if args.model_type == "p":
-        shape = args.shape
-        epochs = args.epochs
-        name = args.name
-        regularizer = args.regularizer
-        verbose = args.verbose
-        data_set_amount = args.data_set
-
-
         if args.weights:
             train_new_patch_model_with_sample_weights(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
         else:
             train_new_patch_model_raw(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
         
     elif args.model_type == "sp":
-        pass
+        if args.weights:
+            pass
+        else:
+            train_new_surface_points_model_raw(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
 
 def retrain(args):
     if args.model_type == "p":
         epochs = args.epochs
         name = args.name
         verbose = args.verbose
-        regularizer = args.regularizer
         data_set_amount = args.data_set
 
         print(args)
         if args.weights:
-            retrain_existing_patch_model_with_sample_weights(name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
+            retrain_existing_patch_model_with_sample_weights(name=name, epochs=epochs, verbose=verbose,data_set_amount=data_set_amount)
         else:
-            retrain_existing_patch_model_raw(name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
+            retrain_existing_patch_model_raw(name=name, epochs=epochs, verbose=verbose,data_set_amount=data_set_amount)
         
     elif args.model_type == "sp":
         pass
@@ -214,7 +239,7 @@ def main():
     train_parser.add_argument('-s','--shape', type=int,nargs='+', help='<Required> Set Number of hidden layers and their nodes', required=True)
     train_parser.add_argument('-mt','--model-type', type=str, help='<Required> Set type of model to train', required=True)
     train_parser.add_argument('-w','--weights', help='<Optional> Set whether to train model with sample_weights', action='store_true')
-    train_parser.add_argument('-ds','--data-set',type=int, help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
+    train_parser.add_argument('-ds','--data-set',type=float, help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
     train_parser.add_argument('-r','--regularizer', help='<Optional> Set whether to train model with an L2 regularizer on the output layer', action='store_true')
     train_parser.add_argument('-e','--epochs', type=int,help='<Required> Set number of epochs to train the new model', required=True)
     train_parser.add_argument('-n','--name', type=str,help='<Required> Set name-prefix for the training history and model files', required=True)
@@ -226,8 +251,7 @@ def main():
     # train_parser.add_argument('-s','--shape', type=int,nargs='+', help='<Required> Set Number of hidden layers and their nodes', required=True)
     retrain_parser.add_argument('-mt','--model-type', type=str, help='<Required> Set type of model to train', required=True)
     retrain_parser.add_argument('-w','--weights', help='<Optional> Set whether to train model with sample_weights', action='store_true')
-    retrain_parser.add_argument('-ds','--data-set',type=int, help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
-    retrain_parser.add_argument('-r','--regularizer',  help='<Optional> Set whether to train model with an L2 regularizer on the output layer', action='store_true')
+    retrain_parser.add_argument('-ds','--data-set',type=float, help='<Optional> Set how much of the dataset to use for training. 0 means use full dataset. default is 0.1')
     retrain_parser.add_argument('-e','--epochs', type=int,help='<Required> Set number of epochs to train the new model', required=True)
     retrain_parser.add_argument('-n','--name', type=str,help='<Required> Set name-prefix for the training history and model files', required=True)
     retrain_parser.add_argument('-v', '--verbose',action='store_true')
@@ -245,23 +269,38 @@ def main():
 
 
 
+@cprofile_function("testingProfiler2_as_decorator")
+def profiling():
+    print("Hello world!")
+    print(2**9)
+
 if __name__ == "__main__":
     # utils.print_avg_last_20_training_epochs_with_std()
     main()
+
     # X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=0.1, split=0.2, random_state=1) # gets training data for the whole dataset
-    # opt = tf.keras.optimizers.Adam()
 
-    # model_name = "patch_model_rand_sample_0.1--shape-512-512-bs-64-copy1"
-    # loaded_patch_model = PatchClassificationModel(name=model_name)
-    # new_model_with_regularizer_and_weights = PatchModelUtils.add_L2_regularizer_to_output_layer_by_creating_a_new_model(patch_model=loaded_patch_model)
-    # new_model_with_regularizer_and_weights.compile(opt=opt, loss_="sparse_categorical_crossentropy", metrics_=["accuracy"])
-    # new_model_with_regularizer_and_weights.retrain_existing_model(data=(X_train, X_test, Y_train, Y_test), epochs_=100,name=model_name)
+    
+    # profiling()
 
-    # utils.plot_training_history(model_name=model_name)
+    # # opt = tf.keras.optimizers.Adam()
+    # # ###############
+    # model_names = ["patch_model_rand_sample_0.1--shape-512-512-bs-64-200-epochs",
+    #                "patch_model_rand_sample_0.1_weights_regularizer-shape-512-512-bs-64",
+    #                "patch_model_rand_sample_0.1_sample_weights-shape-512-512-bs-64"]
+    # # model_names = ["patch_model_rand_sample_0.1_sample_weights-shape-512-512-bs-64"]
+    # utils.bar_plot_patch_model_performance_for_all_patches_for_multiple_models(patch_models_names_list=model_names,
+    #             data=(X_train, X_test, Y_train, Y_test))
+    ###############
+    # model_name = "surface_points_model_test_patch_25"
+    # # model_name = "patch_model_2000_epochs-"
+    # # utils.plot_training_history(model_name=model_name,model_type="sp", plot_smooth=False)
+    # # loaded_patch_model = PatchClassificationModel(name=model_name)
+    # loaded_patch_model = SurfacePointsModelForOnePatch(name=model_name)
+    # X_train_points, Y_train_sp, X_test_points, Y_test_sp = get_training_and_testing_data_for_surface_point_model_for_one_patch(patch=25,amount=0, split=0.2, random_state=1)
+    # print(loaded_patch_model.predict(X_test_points))
+    # print(Y_test_sp)
 
-    # add_L2_regularization_to_output_layer_for_loaded_patch_model(model=model)
-    # name = "testing-model-check-point-callback"
-    # full_model_to_load_path = get_abs_saved_patch_models_folder_path_with_model_name(name=name)       
-    # print("full_model_to_load_path: ", full_model_to_load_path)
+    # utils.plot_training_history(model_name=model_name, model_type="sp")
 
-    # plot_training_history("patch_model_2000_epochs_regularizer-shape-512-512-bs-64", show=True)
+    pass
