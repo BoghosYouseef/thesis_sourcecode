@@ -31,6 +31,15 @@ def get_abs_saved_patch_models_folder_path_with_model_name(name):
         if name in i:
             return os.path.join(get_abs_saved_models_folder_path(),i)
         
+@make_output_path_obj
+def get_abs_saved_surface_points_models_folder_path_with_model_name(name):
+    model_names = os.listdir(get_abs_saved_models_folder_path())
+    
+    for i in model_names:
+        if name in i:
+            return os.path.join(get_abs_saved_models_folder_path(),i)
+        
+
 def get_list_of_elements_in_dir(dir_abs_path):
     return [f for f in Path(dir_abs_path).iterdir() if f.is_file()]
 
@@ -65,6 +74,14 @@ def get_patch_model_training_data_file_abs_path_by_model_name(name):
     for i in model_names_traning_history:
         if name in i:
             return os.path.join(get_patch_model_training_data_folder_path(),i)
+
+@make_output_path_obj
+def get_surface_points_model_training_data_file_abs_path_by_model_name(name):
+    model_names_traning_history = os.listdir(get_surface_points_model_training_data_folder_path())
+    # print("model history trainings: ", model_names_traning_history)
+    for i in model_names_traning_history:
+        if name in i:
+            return os.path.join(get_surface_points_model_training_data_folder_path(),i)
 
 @make_output_path_obj
 def get_plot_name_and_abs_path_from_model_training_data_file_name(name, ext="jpg"):

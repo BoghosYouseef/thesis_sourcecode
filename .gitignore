@@ -6,3 +6,9 @@ archive/
 *.zip
 *.7z
 *.gif
+*.keras
+*.csv
+*.txt
+*.jpeg
+*.jpg
+*.png

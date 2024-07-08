@@ -63,10 +63,28 @@ def get_top_N_largest_nums_indices_in_list(list_, N=5):
             
     return result
 
+def moving_average(x, w):
+    return np.convolve(x, np.ones(w), 'valid') / w
 
-def plot_training_history(model_name,func='loss',plot_name_and_abs_path='',add_to_title='' ,
-                          ext='jpg', show=True, y_range=(1e-4,2e+0)):
-    path_to_csv = get_patch_model_training_data_file_abs_path_by_model_name(model_name)
+
+def moving_average2(input_vector, width):
+    n = len(input_vector)
+    result = np.zeros_like(input_vector)
+    std = np.zeros_like(input_vector)
+    for i in range(n):
+        index_before = max(0, i-width)
+        index_after = min(i+width, n)
+        window = input_vector[index_before:index_after]
+        result[i] = np.mean(window)
+        
+    return result
+
+def plot_training_history(model_name, model_type,func='loss',plot_name_and_abs_path='',add_to_title='' ,
+                          ext='jpg', show=True, y_range=(1e-4,2e+0), plot_smooth=False):
+    if model_type == "p":
+        path_to_csv = get_patch_model_training_data_file_abs_path_by_model_name(model_name)
+    elif model_type == "sp":
+        path_to_csv = get_surface_points_model_training_data_file_abs_path_by_model_name(model_name)
     df = pd.read_csv(path_to_csv)
     title = f"{func} over {len(df.index)} epochs"
     # print("loaded_model.history: ", loaded_model.history)
@@ -97,9 +115,15 @@ def plot_training_history(model_name,func='loss',plot_name_and_abs_path='',add_t
 
     text1 = str(lowest_point1[1])
     text2 = str(lowest_point2[1])
-    ax.plot(data1, color='red', label=func+f'-(final = {text1})')
-    ax.plot(data2, color='blue', label=f'val_{func}'+f'-(final = {text2})')
+    
+    ax.plot(data1, linewidth=0.5, color='red', label=func+f'-(final = {text1})')
+    
+    ax.plot(data2, linewidth=0.5, color='blue', label=f'val_{func}'+f'-(final = {text2})')
 
+    if plot_smooth:
+        ax.plot(moving_average2(data1, 200), color='yellow', linewidth=3,label=func+f'-(final = {text1}) moving average')
+    
+        ax.plot(moving_average2(data2, 200), color='green',linewidth=3,  label=f'val_{func}'+f'-(final = {text2} moving average)')
     # final_text = AnchoredText(,loc)
 
     # ax.annotate(text1,
@@ -194,7 +218,74 @@ def bar_plot_patch_model_performance_for_all_patches(patch_model_name, data, plo
     if plot_name is not None:
         plt.savefig(plot_name+".jpeg")
     # plt.show()
+
+
+def bar_plot_patch_model_performance_for_all_patches_for_multiple_models(patch_models_names_list, data, plot_name=None):
+    t1 = time.time()
+    X_train, X_test, Y_train, Y_test = data
+    Y_train = Y_train.numpy().tolist()
+    Y_test = Y_test.numpy().tolist()
+    training_samples_per_patch = dict(sorted(collections.Counter(Y_train).items()))
+    training_samples_per_patch = collections.OrderedDict(sorted(training_samples_per_patch.items(), key=lambda kv: kv[1], reverse=True))
+
+    validation_samples_per_patch = dict(sorted(collections.Counter(Y_test).items()))
+    patches_and_percentage_of_incorrectly_predicted_val_points = {
+        key: value for key, value in zip([i for i in range(96)], [0 for i in range(96)])
+        }
     
+    model_names_and_percentages_of_each_patch_incorrectly_predicted_validation_points = {
+        key: value for key, value in zip(patch_models_names_list, [{},{},{}])
+    }
+    
+
+    
+    for patch_model_name in patch_models_names_list:
+        # patch_model_abs_path = get_abs_saved_patch_models_folder_path_with_model_name(patch_model_name)
+        patch_model = patch_model_settings.PatchClassificationModel(name=patch_model_name)
+        predictions = patch_model.predict(X_test)
+        incorrect_predictions = list(dict(sorted(collections.Counter([predictions[i] for i in range(len(predictions)) if Y_test[i] != predictions[i]]).items())).values())
+        for i in range(96):
+            val_len = validation_samples_per_patch[i]
+            print("val_len: ", val_len)
+            patches_and_percentage_of_incorrectly_predicted_val_points[i] = (incorrect_predictions[list(training_samples_per_patch.keys())[i]]/val_len) * 100
+        model_names_and_percentages_of_each_patch_incorrectly_predicted_validation_points[patch_model_name] = patches_and_percentage_of_incorrectly_predicted_val_points
+        patches_and_percentage_of_incorrectly_predicted_val_points = {
+        key: value for key, value in zip([i for i in range(96)], [0 for i in range(96)])
+        }
+        
+    width=1.5
+    fig, ax = plt.subplots(figsize=(20, 10))
+    factor = 4
+    print(training_samples_per_patch.keys())
+    ax.bar([factor*i for i in range(96)], training_samples_per_patch.values(), color="lightgrey", width=width, label="Training points")
+    
+    ax2 = ax.twinx()
+    ax2.set_ylabel(r"% " + "of wrongly predicted validation points over all validation points")
+    # ax2.set_ylim([0, 105])
+    # ax2.set_yticks([i for i in range(0,101,5)])
+    # ax2.set_yticklabels([f"{i}%" for i in range(0,101,5)])
+
+    ax.set_xlabel("patches")
+    ax.set_ylabel("Number of training points (bars)")
+    ax.set_xticks([factor*i for i in range(96)])
+    ax.set_xticklabels(([str(i) for i in training_samples_per_patch.keys()]), rotation=90)
+    
+    for model_name,patches_and_percentages  in model_names_and_percentages_of_each_patch_incorrectly_predicted_validation_points.items():
+        print(f"for model {model_name}, patches and percentages: {patches_and_percentages}")
+        if "sample_weights" in model_name:
+            ax2.plot([factor*i for i in range(96)], [i for i in patches_and_percentages.values()], label="with sample weights", linewidth=3)
+        elif "regularizer" in model_name:
+            ax2.plot([factor*i for i in range(96)], [i for i in patches_and_percentages.values()], label="with L-2 regularizer on output layer", linewidth=3)
+        
+        else:
+            ax2.plot([factor*i for i in range(96)], [i for i in patches_and_percentages.values()], label="normal", linewidth=3)
+    
+    plt.title("per-patch comparison of patch classification models with two hidden layesr of 512 neurons each")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 
 def print_avg_last_20_training_epochs_with_std():
     abs_training_path = get_patch_model_training_data_folder_path()
