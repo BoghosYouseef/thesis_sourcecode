@@ -284,11 +284,13 @@ if __name__ == "__main__":
     # profiling()
 
     # # opt = tf.keras.optimizers.Adam()
-    # # ###############
+    # ###############
     # model_names = ["patch_model_rand_sample_0.1--shape-512-512-bs-64-200-epochs",
     #                "patch_model_rand_sample_0.1_weights_regularizer-shape-512-512-bs-64",
     #                "patch_model_rand_sample_0.1_sample_weights-shape-512-512-bs-64"]
-    # # model_names = ["patch_model_rand_sample_0.1_sample_weights-shape-512-512-bs-64"]
+    # model_names = ["patch_model_rand_sample_0.1-shape-512-512-bs-64",
+    #                "patch_model_leaky_relu_alpha_0.01-shape-512-512-bs-64",
+    #                "patch_model_sigmoid-shape-512-512-bs-64"]
     # utils.bar_plot_patch_model_performance_for_all_patches_for_multiple_models(patch_models_names_list=model_names,
     #             data=(X_train, X_test, Y_train, Y_test))
     ###############

@@ -278,7 +278,7 @@ def bar_plot_patch_model_performance_for_all_patches_for_multiple_models(patch_m
             ax2.plot([factor*i for i in range(96)], [i for i in patches_and_percentages.values()], label="with L-2 regularizer on output layer", linewidth=3)
         
         else:
-            ax2.plot([factor*i for i in range(96)], [i for i in patches_and_percentages.values()], label="normal", linewidth=3)
+            ax2.plot([factor*i for i in range(96)], [i for i in patches_and_percentages.values()], label=model_name, linewidth=3)
     
     plt.title("per-patch comparison of patch classification models with two hidden layesr of 512 neurons each")
     plt.legend()
