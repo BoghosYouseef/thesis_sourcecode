@@ -5,10 +5,12 @@ from ..utils.path_funcs import *
 from matplotlib import pyplot as plt
 # from importlib_resources import contents
 
-def collect_csv_files_into_one_df():
+def collect_csv_files_into_one_df(edges_only=False):
     # data_csv_files_path = os.path.join(get_abs_path(get_relative_raw_data_folder_path()),"raw/")
     data_csv_files_path = get_abs_raw_data_folder_path()
     all_csv_files = get_list_of_elements_in_dir(data_csv_files_path)
+    if edges_only:
+        all_csv_files = [i for i in get_list_of_elements_in_dir(data_csv_files_path) if "Edges" in str(i)]
     print("number of files: ", len(all_csv_files))
     dfs = []
     col_names = ["x", "y", "z", "patch", "sp1", "sp2", "sd"]
@@ -84,6 +86,7 @@ def split_dfs_for_training_testing_and_recombine(dfs, amount=960000, split=0.2, 
     return train_final, test_final
 
 def get_xys_sp1_sp2_sd_from_df(df):
+    # print("df = ", df)
     x = df["x"].tolist() 
     y = df["y"].tolist() 
     z = df["z"].tolist()
@@ -107,6 +110,23 @@ def create_patch_model_training_data(df, amount=960000,split=0.2,random_state=1)
     x_tst, y_tst, z_tst, patch_tst, sp1_tst, sp2_tst, sd_tst = get_xys_sp1_sp2_sd_from_df(testing_df)
     X_test = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
     Y_test = [patch_tst[i] for i in range(testing_df.shape[0])]
+    
+    
+    return X_train, X_test, Y_train, Y_test
+
+
+def create_signed_distance_model_training_data(df, amount=960000,split=0.2,random_state=1):
+    
+    dfs = split_df_based_on_patch(df)
+    training_df, testing_df = split_dfs_for_training_testing_and_recombine(dfs,amount=amount, split=split, random_state=random_state)
+
+
+    x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
+    X_train = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
+    Y_train = [sd_trn[i] for i in range(training_df.shape[0])]
+    x_tst, y_tst, z_tst, patch_tst, sp1_tst, sp2_tst, sd_tst = get_xys_sp1_sp2_sd_from_df(testing_df)
+    X_test = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
+    Y_test = [sd_tst[i] for i in range(testing_df.shape[0])]
     
     
     return X_train, X_test, Y_train, Y_test
@@ -137,6 +157,8 @@ def create_surface_points_model_training_data_for_one_patch(patch, df, amount=96
     primary_df = pd.DataFrame({})
     for i in dfs:
         try:
+            print(f"now trying to find df with patch {patch}. current df's patch: {i['patch'].iloc[0]}")
+            
             if i["patch"].iloc[0] == patch:
                 primary_df = i
                 raise StopIteration
@@ -162,8 +184,8 @@ def create_surface_points_model_training_data_for_one_patch(patch, df, amount=96
 
     return X_train_points, Y_train_sp, X_test_points, Y_test_sp 
 
-def get_training_and_testing_data_for_patch_model(amount=960000, split=0.2,random_state=1):
-    df = collect_csv_files_into_one_df()
+def get_training_and_testing_data_for_patch_model(amount=960000, split=0.2,random_state=1, edges_only=False):
+    df = collect_csv_files_into_one_df(edges_only=edges_only)
     X_train, X_test, Y_train, Y_test = create_patch_model_training_data(df, amount=amount, split=split,random_state=random_state)
     X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
     return X_train, X_test, Y_train, Y_test
@@ -221,6 +243,12 @@ def get_training_and_testing_data_for_sp_model(amount=960000, split=0.2):
        
         return X_train_points,X_train_patches, X_test_points,X_test_patches, Y_train_p1, Y_train_p2, Y_test_p1,Y_test_p2
 
+
+def get_training_and_testing_data_for_signed_distance_model(amount=960000, split=0.2,random_state=1):
+    df = collect_csv_files_into_one_df()
+    X_train, X_test, Y_train, Y_test = create_signed_distance_model_training_data(df, amount=amount, split=split,random_state=random_state)
+    X_train, X_test, Y_train, Y_test = tf.convert_to_tensor(X_train),tf.convert_to_tensor(X_test),tf.convert_to_tensor(Y_train),tf.convert_to_tensor(Y_test)
+    return X_train, X_test, Y_train, Y_test
 
 
 def plot_data(training_data, testing_data):

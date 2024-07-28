@@ -34,8 +34,24 @@ def get_abs_saved_patch_models_folder_path_with_model_name(name):
 @make_output_path_obj
 def get_abs_saved_surface_points_models_folder_path_with_model_name(name):
     model_names = os.listdir(get_abs_saved_models_folder_path())
-    
     for i in model_names:
+        print(i)
+        if name in i:
+            return os.path.join(get_abs_saved_models_folder_path(),i)
+        
+@make_output_path_obj
+def get_abs_saved_signed_distance_models_folder_path_with_model_name(name):
+    model_names = os.listdir(get_abs_saved_models_folder_path())
+    for i in model_names:
+        print(i)
+        if name in i:
+            return os.path.join(get_abs_saved_models_folder_path(),i)
+        
+@make_output_path_obj
+def get_abs_saved_signed_distance_models_folder_path_with_model_name(name):
+    model_names = os.listdir(get_abs_saved_models_folder_path())
+    for i in model_names:
+        print(i)
         if name in i:
             return os.path.join(get_abs_saved_models_folder_path(),i)
         
@@ -66,6 +82,9 @@ def get_patch_model_training_data_folder_path():
 @make_output_path_obj
 def get_surface_points_model_training_data_folder_path():
     return os.path.join(get_abs_model_training_data_folder_path(), "surface_points_model")
+@make_output_path_obj
+def get_signed_distance_model_training_data_folder_path():
+    return os.path.join(get_abs_model_training_data_folder_path(), "signed_distance_model")
 
 @make_output_path_obj
 def get_patch_model_training_data_file_abs_path_by_model_name(name):
@@ -82,6 +101,13 @@ def get_surface_points_model_training_data_file_abs_path_by_model_name(name):
     for i in model_names_traning_history:
         if name in i:
             return os.path.join(get_surface_points_model_training_data_folder_path(),i)
+@make_output_path_obj
+def get_signed_distance_model_training_data_file_abs_path_by_model_name(name):
+    model_names_traning_history = os.listdir(get_signed_distance_model_training_data_folder_path())
+    # print("model history trainings: ", model_names_traning_history)
+    for i in model_names_traning_history:
+        if name in i:
+            return os.path.join(get_signed_distance_model_training_data_folder_path(),i)
 
 @make_output_path_obj
 def get_plot_name_and_abs_path_from_model_training_data_file_name(name, ext="jpg"):
