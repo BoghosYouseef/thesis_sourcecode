@@ -1,5 +1,4 @@
-
- #!/bin/bash -l
+#!/bin/bash -l
  #SBATCH --mail-user=boghos.youseef.001@student.uni.lu
  #SBATCH --mail-type=ALL
  #SBATCH -N 1
