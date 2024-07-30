@@ -6,10 +6,10 @@
  #SBATCH -c 1
  #SBATCH -G 1
  #SBATCH --qos normal
- #SBATCH --time=3:00:00
+ #SBATCH --time=2:00:00
  #SBATCH -p gpu
  #SBATCH --mem=10GB
 
 
- python3 main.py train -mt sp -p 58 -s 512 512 -e 100 -n surface_points_model_patch_58 -ds 0
+ python3 main.py train -mt sp -p 58 -s 512 512 -e 1000 -n surface_points_model_patch_58 -ds 0
 

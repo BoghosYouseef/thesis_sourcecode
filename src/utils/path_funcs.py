@@ -35,7 +35,7 @@ def get_abs_saved_patch_models_folder_path_with_model_name(name):
 def get_abs_saved_surface_points_models_folder_path_with_model_name(name):
     model_names = os.listdir(get_abs_saved_models_folder_path())
     for i in model_names:
-        print(i)
+        # print(i)
         if name in i:
             return os.path.join(get_abs_saved_models_folder_path(),i)
         
@@ -43,7 +43,7 @@ def get_abs_saved_surface_points_models_folder_path_with_model_name(name):
 def get_abs_saved_signed_distance_models_folder_path_with_model_name(name):
     model_names = os.listdir(get_abs_saved_models_folder_path())
     for i in model_names:
-        print(i)
+        # print(i)
         if name in i:
             return os.path.join(get_abs_saved_models_folder_path(),i)
         
@@ -51,7 +51,7 @@ def get_abs_saved_signed_distance_models_folder_path_with_model_name(name):
 def get_abs_saved_signed_distance_models_folder_path_with_model_name(name):
     model_names = os.listdir(get_abs_saved_models_folder_path())
     for i in model_names:
-        print(i)
+        # print(i)
         if name in i:
             return os.path.join(get_abs_saved_models_folder_path(),i)
         

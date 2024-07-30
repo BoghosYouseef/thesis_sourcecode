@@ -26,7 +26,7 @@ class SurfacePointsModelForOnePatch:
                 # full_name =  full_name.split(" ")
                 # full_name = str(full_name[-1])
                 
-                print("Model path: ", model_path)
+                # print("Model path: ", model_path)
                 # print("full_name: ", full_name)
                 # training_history_csv_path = get_patch_model_training_data_file_abs_path_by_model_name(name)
                 self.model = keras.models.load_model(model_path)
@@ -40,7 +40,7 @@ class SurfacePointsModelForOnePatch:
                 print(f"{error}")
         
         if NNShape:
-                total_layers = [layers.Input(shape=(3,))]
+                total_layers = [layers.Input(shape=(3,)), layers.Normalization()]
                 for num_of_neurons in NNShape:
                     total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
                 
@@ -129,8 +129,12 @@ class SurfacePointsModelForOnePatch:
     
         except NameError as err:
             print("name of model not found in training folder.")
+
+            
     def predict(self, points):
         return self.model.predict(points)
+    
+
     def __create_file_name(self):
         try:
             print("self.settings: ", self.settings)
