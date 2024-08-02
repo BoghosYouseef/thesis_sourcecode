@@ -651,10 +651,10 @@ def multi_model_voting_system(data, models_names):
     print("accuracy: ", (correct_final_predictions/len(Y_test_as_list))*100)
 
 def scheduler(epoch, lr):
-    if epoch < 80:
-        return lr
-    else:
+    if (epoch > 0) and ((epoch%50) == 0):
         return lr * np.exp(-0.1)
+    else:
+        return lr
 
 # def get_classification_error_per_patch(model_names, data):
 #     X_train, X_test, Y_train, Y_test = data
