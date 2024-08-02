@@ -6,7 +6,9 @@ import pandas as pd
 import tensorflow as tf
 from pathlib import Path
 from tensorflow.keras import layers
-from keras.callbacks import CSVLogger, ModelCheckpoint
+from keras.callbacks import CSVLogger, ModelCheckpoint, LearningRateScheduler
+from keras.layers.activation import LeakyReLU
+from keras import initializers
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.offsetbox import AnchoredText
@@ -43,11 +45,12 @@ class PatchClassificationModel:
                 print(f"{error}")
         
         else:
-            
+            # initializer = initializers.GlorotNormal()
             if NNShape:
                 total_layers = [layers.Input(shape=(3,))]
                 for num_of_neurons in NNShape:
-                    total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
+                    total_layers.append(layers.Dense(num_of_neurons, activation="relu"))
+                    # total_layers.append(LeakyReLU(alpha=0.01))
                 
                 if regularizer:
                     total_layers.append(layers.Dense(96, activation='softmax', kernel_regularizer='l2'))
@@ -94,15 +97,15 @@ class PatchClassificationModel:
             else:
                 path_to_saved_model = get_abs_saved_patch_models_folder_path_with_model_name(name=name)
                 model_training_history = get_patch_model_training_data_file_abs_path_by_model_name(name=name)
-                
+                lr_scheduler = LearningRateScheduler(utils.scheduler)
                 csv_logger = CSVLogger(model_training_history, append=True)
-                model_check_point = ModelCheckpoint(path_to_saved_model)
+                model_check_point = ModelCheckpoint(path_to_saved_model,save_best_only=True)
                 try:
                     if sample_weights is not None:
                         print("using sample weights " + "-#-"*10)
-                        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point], sample_weight=sample_weights)
+                        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point,lr_scheduler], sample_weight=sample_weights)
                     else:
-                        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point])
+                        self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point,lr_scheduler])
 
                 except KeyboardInterrupt as error:
                     print("Training of model stopped!")
@@ -133,11 +136,12 @@ class PatchClassificationModel:
                 
                 csv_logger = CSVLogger(path_training_history)
                 model_check_point = ModelCheckpoint(path_to_saved_model)
+                lr_scheduler = LearningRateScheduler(utils.scheduler)
                 if sample_weights is not None:
                     print("using sample weights " + "-#-"*10)
                     self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point], sample_weight=sample_weights)
                 else:
-                    self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point])
+                    self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point, lr_scheduler])
                 # re_enumerate_epochs_in_csv_file(path_training_history)
             except KeyboardInterrupt:
                 print("Training of model stopped!")
@@ -175,6 +179,32 @@ class PatchClassificationModel:
         predicted_patches = [np.argmax(i) for i in predictions]
         return predicted_patches
     
+    def predict_and_give_secondary_estimate(self, points):
+        predictions = self.model.predict(points)
+        predicted_patches = []
+        for i in predictions:
+            top_prediction = np.argmax(i)
+            # remove top prediction
+            i[top_prediction] = 0
+            second_top_prediction = np.argmax(i)
+            result = [top_prediction, second_top_prediction]
+            predicted_patches.append(result)
+        return predicted_patches
+
+    def predict_and_give_three_estimates(self, points):
+        predictions = self.model.predict(points)
+        # print("predictions: ", predictions)
+        predicted_patches = []
+        for i in predictions:
+            top_prediction = np.argmax(i)
+            # remove top prediction
+            i[top_prediction] = 0
+            second_top_prediction = np.argmax(i)
+            i[second_top_prediction] = 0
+            third_top_prediction = np.argmax(i)
+            result = [top_prediction, second_top_prediction, third_top_prediction]
+            predicted_patches.append(result)
+        return predicted_patches
     def plot(self,func='loss',name='', save=False,add_to_title='' ,ext='jpg', show=True, loaded_model=False):
 
         model_training_history = get_patch_model_training_data_file_abs_path_by_model_name(name=self.name)
