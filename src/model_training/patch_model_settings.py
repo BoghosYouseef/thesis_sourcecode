@@ -135,7 +135,7 @@ class PatchClassificationModel:
             try:
                 
                 csv_logger = CSVLogger(path_training_history)
-                model_check_point = ModelCheckpoint(path_to_saved_model)
+                # model_check_point = ModelCheckpoint(path_to_saved_model)
                 lr_scheduler = LearningRateScheduler(utils.scheduler)
                 model_check_point = ModelCheckpoint(path_to_saved_model,save_best_only=True)
                 if sample_weights is not None:
