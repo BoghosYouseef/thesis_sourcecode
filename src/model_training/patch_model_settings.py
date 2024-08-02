@@ -137,6 +137,7 @@ class PatchClassificationModel:
                 csv_logger = CSVLogger(path_training_history)
                 model_check_point = ModelCheckpoint(path_to_saved_model)
                 lr_scheduler = LearningRateScheduler(utils.scheduler)
+                model_check_point = ModelCheckpoint(path_to_saved_model,save_best_only=True)
                 if sample_weights is not None:
                     print("using sample weights " + "-#-"*10)
                     self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point], sample_weight=sample_weights)
