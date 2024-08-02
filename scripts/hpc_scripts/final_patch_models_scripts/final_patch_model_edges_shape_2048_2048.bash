@@ -11,5 +11,5 @@
 #SBATCH --mem=10GB
 
 
-python3 main.py train -mt p -s 2048 2048 -E -e 100 -n final_patch_model_edges -ds 0 -v
+python3 main.py train -mt p -s 2048 2048 -E -e 200 -n final_patch_model_edges -ds 0 -v
 
