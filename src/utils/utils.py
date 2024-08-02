@@ -118,12 +118,12 @@ def plot_training_history(model_name, model_type,func='loss',plot_name_and_abs_p
     text1 = str(lowest_point1[1])
     text2 = str(lowest_point2[1])
     
-    # ax.plot(data1, linewidth=0.5, color='red', label=func+f'-(final = {text1})')
+    ax.plot(data1, linewidth=0.5, color='red', label=func+f'-(final = {text1})')
     
     ax.plot(data2, linewidth=0.5, color='blue', label=f'val_{func}'+f'-(final = {text2})')
 
     if plot_smooth:
-        # ax.plot(moving_average2(data1, 200), color='yellow', linewidth=3,label=func+f'-(final = {text1}) moving average')
+        ax.plot(moving_average2(data1, 200), color='yellow', linewidth=3,label=func+f'-(final = {text1}) moving average')
     
         ax.plot(moving_average2(data2, 200), color='green',linewidth=3,  label=f'val_{func}'+f'-(final = {text2} moving average)')
     # final_text = AnchoredText(,loc)
@@ -650,7 +650,11 @@ def multi_model_voting_system(data, models_names):
         
     print("accuracy: ", (correct_final_predictions/len(Y_test_as_list))*100)
 
-
+def scheduler(epoch, lr):
+    if epoch < 80:
+        return lr
+    else:
+        return lr * np.exp(-0.1)
 
 # def get_classification_error_per_patch(model_names, data):
 #     X_train, X_test, Y_train, Y_test = data

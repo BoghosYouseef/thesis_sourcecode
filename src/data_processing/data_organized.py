@@ -164,23 +164,24 @@ def create_surface_points_model_training_data_for_one_patch(patch, df, amount=96
                 raise StopIteration
         except StopIteration:
             print(f"now processing df with patch {primary_df['patch'].iloc[0]}")
+            break
     
     training_df, testing_df = split_dfs_for_training_testing_and_recombine([primary_df],amount=amount, split=split, random_state=random_state)
 
-
+    scaling = 0
     # training_df = training_df.sample(frac=1)
     x_trn, y_trn, z_trn, patch_trn, sp1_trn, sp2_trn, sd_trn = get_xys_sp1_sp2_sd_from_df(training_df)
     X_train_points = [(x_trn[i], y_trn[i], z_trn[i]) for i in range(training_df.shape[0])]
     # X_train_patches = [patch_trn[i] for i in range(training_df.shape[0])]
     # Y_train_p1 = [sp1_trn[i] for i in range(training_df.shape[0])]
     # Y_train_p2 = [sp2_trn[i] for i in range(training_df.shape[0])]
-    Y_train_sp = [(sp1_trn[i],sp2_trn[i]) for i in range(training_df.shape[0])]
+    Y_train_sp = [(sp1_trn[i]*(10**scaling),sp2_trn[i]*(10**scaling)) for i in range(training_df.shape[0])]
     x_tst, y_tst, z_tst, patch_tst, sp1_tst, sp2_tst, sd_tst = get_xys_sp1_sp2_sd_from_df(testing_df)
     X_test_points = [(x_tst[i], y_tst[i], z_tst[i]) for i in range(testing_df.shape[0])]
     # X_test_patches = [patch_tst[i] for i in range(testing_df.shape[0])]
     # Y_test_p1 = [sp1_tst[i] for i in range(testing_df.shape[0])]
     # Y_test_p2 = [sp2_tst[i] for i in range(testing_df.shape[0])]
-    Y_test_sp = [(sp1_tst[i],sp2_tst[i]) for i in range(testing_df.shape[0])]
+    Y_test_sp = [(sp1_tst[i]*(10**scaling),sp2_tst[i]*(10**scaling)) for i in range(testing_df.shape[0])]
 
     return X_train_points, Y_train_sp, X_test_points, Y_test_sp 
 

@@ -123,9 +123,9 @@ from contextlib import redirect_stdout
 # list_of_wrong_guesses_trn = [i for i in X_train]
 
 
-def train_new_patch_model_raw(shape=None, name=None, epochs=100, verbose=None, regularizer=False, data_set_amount=0.1): #default: shape=None, name=None, epochs=100
+def train_new_patch_model_raw(shape=None, name=None, epochs=100, verbose=None, regularizer=False, data_set_amount=0.1, edges_only=False): #default: shape=None, name=None, epochs=100
     
-    X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=data_set_amount, split=0.2, random_state=1) # gets training data for the whole dataset
+    X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=data_set_amount, split=0.2, random_state=1,edges_only=edges_only) # gets training data for the whole dataset
     if verbose is not None:
         print(f"Now training a raw new patch model.")
         print(f"Model shape: {shape}, Epochs: {epochs}, Name: {name}")
@@ -248,6 +248,7 @@ def retrain_existing_signed_distance_model_raw(shape=None, name=None, epochs=100
     patch_model.compile(opt=opt, loss_="mae", metrics_=['mae'])
     patch_model.retrain_existing_model((X_train, X_test, Y_train, Y_test), epochs, batch_size_=64, verbose_=verbose, name=name)
 
+@cprofile_function("testingProfiler2_as_decorator")
 def train(args):
     shape = args.shape
     epochs = args.epochs
@@ -256,18 +257,20 @@ def train(args):
     verbose = args.verbose
     data_set_amount = args.data_set
     patch = args.sp_patch
+    edges_only = args.edges_only
+
     if args.model_type == "p":
         if args.weights:
             train_new_patch_model_with_sample_weights(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
         else:
-            train_new_patch_model_raw(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
+            train_new_patch_model_raw(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount, edges_only=edges_only)
         
     elif args.model_type == "sp":
         assert patch is not None, "Training a surface points model requires a patch to be chosen for training."
         if args.weights:
             pass
         else:
-            train_new_surface_points_model_raw(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
+            train_new_surface_points_model_raw(shape=shape, name=name, epochs=epochs,patch=patch, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
 
     elif args.model_type == "sd":
         train_new_signed_distance_model_raw(shape=shape, name=name, epochs=epochs, verbose=verbose, regularizer=regularizer,data_set_amount=data_set_amount)
@@ -317,6 +320,7 @@ def main():
     train_parser.add_argument('-e','--epochs', type=int,help='<Required> Set number of epochs to train the new model', required=True)
     train_parser.add_argument('-n','--name', type=str,help='<Required> Set name-prefix for the training history and model files', required=True)
     train_parser.add_argument('-v', '--verbose',action='store_true')
+    train_parser.add_argument('-E','--edges-only',action='store_true')
     train_parser.set_defaults(func=train)
 
     # create the parser for the "retrain" command
@@ -350,11 +354,11 @@ def profiling():
     print(2**9)
 
 if __name__ == "__main__":
-    # utils.print_avg_last_20_training_epochs_with_std()
+    # utils.print_avg_last_20_training_epochs_with_std(model_type="sp")
     main()
-    # utils.plot_training_history("patch_model_rand_sample_0.1-shape-512-512-bs-64-retrained_on_edges","p")
+    # utils.plot_training_history("patch_model_training_on_full_data_first_then_training_on_edges_with_full_data_validation","p")
     # X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_signed_distance_model(amount=0.1, split=0.2, random_state=1) # gets training data for the whole dataset
-    
+
     # model = SignedDistanceModel(name="testing_second_sd_model-shape-512-512-bs-64")
     # random_indices = np.random.randint(50000, size=10)
     # print(f"indices: {random_indices}")
@@ -398,12 +402,24 @@ if __name__ == "__main__":
 
     # # opt = tf.keras.optimizers.Adam()
     # ###############
-    ds = 0.1
-    X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=ds, split=0.2, random_state=1) # gets training data for the whole dataset
-    model = PatchClassificationModel([512, 512])
-    learning_rate = 0.001
-    model.compile(opt=keras.optimizers.Adam(learning_rate=learning_rate),loss_="sparse_categorical_crossentropy",metrics_=['accuracy'],sample_weight=False)
-    model.train(data=(X_train, X_test, Y_train, Y_test),epochs_=100, batch_size_=32,name=f"patch_classification_rand_sample_{ds}_sigmoid_glorot_init_lr_{learning_rate}")
+    # ds = 0.1
+    # X_train1, X_test1, Y_train1, Y_test1 = get_training_and_testing_data_for_patch_model(amount=0, split=0.2, random_state=1, edges_only=True) # gets training data for the whole dataset
+    # X_train, X_test, Y_train, Y_test = get_training_and_testing_data_for_patch_model(amount=0.1, split=0.2, random_state=1) # gets training data for the whole dataset
+    
+
+    # X_test_total = tf.concat([X_test, X_test1],0)
+    # Y_test_total = tf.concat([Y_test, Y_test1],0)
+
+    # name="patch_model_testing_load_reload_keras"
+    # model = PatchClassificationModel([512, 512])
+    # learning_rate = 0.001
+    # model.compile(opt=keras.optimizers.Adam(),loss_="sparse_categorical_crossentropy",metrics_=['accuracy'],sample_weight=False)
+    # model.train(data=(X_train, X_test, Y_train, Y_test), epochs_=2, batch_size_=64, verbose_=1, name=name)
+    # reloaded_model = PatchClassificationModel(name=name)
+    # model to plot: "patch_model_training_on_full_data_first_then_training_on_edges_with_full_data_validation"
+    # reloaded_model.retrain_existing_model(data=(X_train, X_test,Y_train,Y_test),  epochs_=2, batch_size_=64, verbose_=1,name=name)
+
+    # model.train(data=(X_train, X_test, Y_train, Y_test),epochs_=100, batch_size_=32,name=f"patch_classification_rand_sample_{ds}_sigmoid_glorot_init_lr_{learning_rate}")
     # model_names = ["patch_model_rand_sample_0.1--shape-512-512-bs-64-200-epochs",
     #                "patch_model_rand_sample_0.1_weights_regularizer-shape-512-512-bs-64",
     #                "patch_model_rand_sample_0.1_sample_weights-shape-512-512-bs-64",
@@ -424,5 +440,16 @@ if __name__ == "__main__":
     # print(Y_test_sp)
 
     # utils.plot_training_history(model_name=model_name, model_type="sp")
+    # X_train_points, Y_train_sp, X_test_points, Y_test_sp = get_training_and_testing_data_for_surface_point_model_for_one_patch(amount=0,patch=11, split=0.2, random_state=1) # gets training data for the whole dataset
 
+    # test_sp_model_name = "surface_points_model_patch_11-shape-512-512-bs-64"
+    # # test_sp_model_name = "surface_points_model_patch_0_testing-shape-512-512-bs-64"
+    # sp_model = SurfacePointsModelForOnePatch(name=test_sp_model_name)
+    # print("X_test:", X_test_points)
+    # print("Y_test:", Y_test_sp)
+    # regressed_vals = sp_model.predict(X_test_points)
+    # for i in range(5):
+    #     print(f"Y_test[{i}]=    {Y_test_sp[i]}")
+    #     print(f"predictions =", regressed_vals[i])
+    
     pass

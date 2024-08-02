@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from keras.callbacks import CSVLogger, ModelCheckpoint
+from keras.callbacks import CSVLogger, ModelCheckpoint, LearningRateScheduler
 from pathlib import Path
 from keras import layers, initializers
 from matplotlib import pyplot as plt
@@ -40,7 +40,7 @@ class SurfacePointsModelForOnePatch:
                 print(f"{error}")
         
         if NNShape:
-                total_layers = [layers.Input(shape=(3,)), layers.Normalization()]
+                total_layers = [layers.Input(shape=(3,))]#, layers.Normalization()]
                 for num_of_neurons in NNShape:
                     total_layers.append(layers.Dense(num_of_neurons, activation='relu'))
                 
@@ -85,7 +85,8 @@ class SurfacePointsModelForOnePatch:
                 
                 csv_logger = CSVLogger(path_training_history)
                 model_check_point = ModelCheckpoint(path_to_saved_model)
-                self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point])
+                # lr_scheduler = LearningRateScheduler(utils.scheduler)
+                self.history = self.model.fit(X_train, Y_train, epochs=epochs_, shuffle=True,batch_size=batch_size_, validation_data=(X_test, Y_test), verbose=verbose_, callbacks=[csv_logger, model_check_point])#, lr_scheduler])
                 # re_enumerate_epochs_in_csv_file(path_training_history)
             except KeyboardInterrupt:
                 print("Training of model stopped!")
