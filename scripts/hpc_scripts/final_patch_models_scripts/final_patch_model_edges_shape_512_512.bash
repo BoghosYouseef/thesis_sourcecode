@@ -6,7 +6,7 @@
 #SBATCH -c 1
 #SBATCH -G 1
 #SBATCH --qos normal
-#SBATCH --time=2:00:00
+#SBATCH --time=3:00:00
 #SBATCH -p gpu
 #SBATCH --mem=10GB
 

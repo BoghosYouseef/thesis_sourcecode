@@ -6,9 +6,9 @@
 #SBATCH -c 1
 #SBATCH -G 1
 #SBATCH --qos normal
-#SBATCH --time=2:00:00
+#SBATCH --time=23:59:00
 #SBATCH -p gpu
-#SBATCH --mem=10GB
+#SBATCH --mem=20GB
 
 
 python3 main.py train -mt p -s 512 512 -e 100 -n final_patch_model -ds 0 -v
